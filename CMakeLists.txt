@@ -4,7 +4,11 @@ set(CMAKE_CXX_STANDARD 17)            # Enable c++17 standard
 
 # Add main file
 set(SOURCE_FILES 
-    src/main.cpp)
+    src/main.cpp
+    src/app/application.cpp
+    src/shader/shader.cpp
+    src/computeShader/computeShader.cpp
+    )
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE_FILES})
 
 # ---- Link libraries ----
