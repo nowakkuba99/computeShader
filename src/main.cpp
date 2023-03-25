@@ -9,6 +9,9 @@
 
 
 #include "../inc/app/application.hpp"
+#include "../inc/shader/shader.hpp"
+#include "../inc/computeShader/computeShader.hpp"
+
 int main()
 {
 
