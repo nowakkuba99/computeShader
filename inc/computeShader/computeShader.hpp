@@ -2,6 +2,7 @@
 #define E1898DCC_99E2_43F4_BB66_A8843F480BA1
 
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
 #include <string>
@@ -11,7 +12,7 @@
 #include <vector>
 
 class ComputeShader {
-
+public:
     /**
      * Compute shader constructor.
      * 

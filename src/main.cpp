@@ -40,14 +40,34 @@ int main()
 
     /* Be ready for resize */
     glfwSetFramebufferSizeCallback(window, app.framebuffer_size_callback);
-    
 
+    /* Compute shader creation */
+    ComputeShader compShader("shaderCodes/computeShader.cm", glm::uvec2(10,1));
+    // compShader.use();
+    
+    // float values[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    // compShader.set_values(values);
+
+    std::cout<<glGetString(GL_VERSION);
 
 /* Main loop */
     /* Renders each frame with each iteration */
     while (!glfwWindowShouldClose(window))
     {
+        /* Input handling */
         app.processInput(window); // Get user input and process it
+
+        // /* Compute shader */
+        // compShader.use();
+        // compShader.dispatch();
+        // compShader.wait();
+
+        // auto data = compShader.get_values();
+        // for(const auto& val: data)
+        // {
+        //     std::cout<<val<<" ";
+        // }
+        // std::cout<<std::endl;
 
         /* Start rendering */
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Set color that will be set with clear command

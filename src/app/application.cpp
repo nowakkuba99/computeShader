@@ -27,8 +27,8 @@ void Application::initGLFW()
 {
     /* Initialize GLFW */
     glfwInit();                                                    // Initialize GLFW library
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);                 // Set openGL version to 3.3
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);                 // Set openGL version to 3.3
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);                 // Set openGL version to 4.5
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);                 // Set openGL version to 4.5
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // Set openGL profile to core profile
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);           // Set for MAC OS to set window forward
 }
