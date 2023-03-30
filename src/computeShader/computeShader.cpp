@@ -138,6 +138,9 @@ void ComputeShader::use()
     glUseProgram(id);
     glBindImageTexture(0, mapOne, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
     glBindImageTexture(1, mapTwo, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    glBindImageTexture(1, mapThree, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    glBindImageTexture(1, mapFour, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+
 }
 
 void ComputeShader::dispatch() {
