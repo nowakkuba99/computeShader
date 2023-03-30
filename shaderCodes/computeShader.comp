@@ -1,0 +1,66 @@
+#version 450 core
+
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(r32f) uniform image2D mapOne;
+layout(r32f) uniform image2D mapTwo;
+layout(r32f) uniform image2D mapThree;
+layout(r32f) uniform image2D mapFour;
+layout(std430, binding = 4) buffer count
+{
+    int counter;
+};
+layout(r32f) uniform image2D muMap;
+layout(r32f) uniform image2D rhoMap;
+
+void main() {
+    // get position to read/write data from
+    ivec2 pos = ivec2( gl_GlobalInvocationID.xy );
+    /*
+        --- Count = 1 ---
+        1: Previous -> READ ONLY
+        2: Current -> READ ONLY
+        3: Next -> WRITE
+        4: Unused
+        --- Count = 2 ---
+        1: Unused
+        2: Previous -> READ ONLY
+        3: Current -> READ ONLY
+        4: Next -> WRITE
+        --- Count = 3 ---
+        1: Next -> WRITE
+        2: Unused
+        3: Previous -> READ ONLY
+        4: Current - READ ONLY
+        --- Count = 4 ---
+        1: Current -> READ ONLY
+        2: Next -> WRITE
+        3: Unused
+        4: Previous -> READ ONLY
+        --- REPEAT ---
+    */
+
+
+    // get value stored in the image
+    float in_one = imageLoad( mapOne, pos ).r;
+    float in_two = imageLoad( mapTwo, pos ).r;
+    float in_three = imageLoad( mapTwo, pos ).r;
+
+    if(counter == 0)
+    {
+        //Read mapOne, Save mapTwo
+        imageStore(mapTwo,pos,vec4(in_one,0,0,0));
+
+        counter = counter + 1;
+    }
+    else
+    {
+        //Read mapTwo, Save mapOne
+        imageStore(mapOne,pos,vec4(in_two+1,0,0,0));
+
+        counter = 0;
+    }
+    
+    
+
+}
