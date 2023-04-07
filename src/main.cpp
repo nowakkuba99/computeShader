@@ -15,6 +15,7 @@
 // User includes
 #include "../inc/app/application.hpp"
 #include "../inc/shader/shader.hpp"
+#include "../inc/shader/Textshader.hpp"
 #include "../inc/computeShader/computeShader.hpp"
 
 
@@ -22,7 +23,7 @@ int main()
 {
 
 #ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);    //OpenGl does not support compute shaders on macos -> Translate to Metal API
 #endif
     Application app;
     /* Initialize GLFW */
@@ -44,6 +45,14 @@ int main()
         return -1;
     }
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    /* Text shaders */
+    TextShader textShader("shaderCodes/TextVertex.vs", "shaderCodes/TextFragment.fs");
+    textShader.makeActive();
+    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(800), 0.0f, static_cast<float>(600));
+    glUniformMatrix4fv(glGetUniformLocation(textShader.shaderProgramID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+    textShader.initBuffers();
     /* Be ready for resize */
     glfwSetFramebufferSizeCallback(window, app.framebuffer_size_callback);
 
@@ -93,6 +102,7 @@ int main()
 
 /* Main loop */
     /* Renders each frame with each iteration */
+    int counter = 0;
     while (!glfwWindowShouldClose(window))
     {
         /* Input handling */
@@ -130,11 +140,14 @@ int main()
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D,compShader.getTexture());
         shader.renderQuad();
-
+        std::string label = "Loop: " + std::to_string(counter) + "/ who knows?";
+        textShader.RenderText(label , 2.0f, 25.0f, 1.0f, glm::vec3(0.5, 0.8f, 0.2f));
+        textShader.RenderText("(C) Jakub Nowak 2023", 600.0f, 570.0f, 0.75f, glm::vec3(16/255, 16/255, 16/255));
 
         glfwSwapBuffers(window); // Swap current pixels values for the window
         glfwPollEvents(); // Check for events (e.g. keyboard interupts etc.) and calls callbacks
         //compShader.increase_map_counter();
+        ++counter;
     }
 
 
