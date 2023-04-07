@@ -7,7 +7,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-// Freetype libraries
+// Freetype libraries - text rendering
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
