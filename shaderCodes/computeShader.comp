@@ -1,21 +1,34 @@
 #version 450 core
 
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
 layout(r32f) uniform image2D mapOne;
 layout(r32f) uniform image2D mapTwo;
 layout(r32f) uniform image2D mapThree;
 layout(r32f) uniform image2D mapFour;
-layout(std430, binding = 4) buffer count
-{
-    int counter;
-};
 layout(r32f) uniform image2D muMap;
 layout(r32f) uniform image2D rhoMap;
+layout(std430, binding = 6) buffer shaderStorageBuffer
+{
+    int counter;
+    float measurements_data[20];
+    float extortion;
+};
 
-void main() {
+
+void main() 
+{
     // get position to read/write data from
-    ivec2 pos = ivec2( gl_GlobalInvocationID.xy );
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 dims = imageSize(mapOne);
+    float in_one = imageLoad(mapOne, pos).r;
+    float in_two = imageLoad(mapTwo, pos).r;
+    float in_three = imageLoad(mapThree, pos).r;
+    if(in_one >= 1)
+        in_one = -1;
+    imageStore(mapOne,pos,vec4(in_one + 0.0001,0,0,0));
+    
+}
     /*
         --- Count = 1 ---
         1: Previous -> READ ONLY
@@ -41,26 +54,95 @@ void main() {
     */
 
 
-    // get value stored in the image
-    float in_one = imageLoad( mapOne, pos ).r;
-    float in_two = imageLoad( mapTwo, pos ).r;
-    float in_three = imageLoad( mapTwo, pos ).r;
+    // // get value stored in the image
+    // float in_one = imageLoad(mapOne, pos).r;
+    // float in_two = imageLoad(mapTwo, pos).r;
+    // float in_three = imageLoad(mapThree, pos).r;
+    // if(counter == 0)
+    // {
+    //     //Read mapOne, Save mapTwo
+    //     // imageStore(mapTwo,pos,vec4(in_one,0,0,0));
+    //     if(in_one == 0)
+    //     {
+    //         ivec2 tempPos = pos;
+    //         if((tempPos.x -1) >=0)
+    //         {
+    //             tempPos.x = tempPos.x - 1;
+    //             float leftVal = imageLoad(mapOne, tempPos).r;
+    //             if(leftVal == 1)
+    //             {
+    //                 imageStore(mapTwo,pos,vec4(1,0,0,0));
+    //             }
+    //             else
+    //             {
+    //                 imageStore(mapTwo,pos,vec4(0,0,0,0));
+    //             }
+    //         }
+    //     }
+    //     else// if(in_one == 1)
+    //     {
+    //         ivec2 tempPos = pos;
+    //         if((tempPos.x + 1) < dims.x)
+    //         {
+    //             tempPos.x = tempPos.x + 1;
+    //             if(imageLoad(mapOne, tempPos).r == 0)
+    //             {
+    //                 imageStore(mapTwo,pos,vec4(0,0,0,0));
+    //             }
+    //             else
+    //             {
+    //                 imageStore(mapTwo,pos,vec4(1,0,0,0));
+    //             }
+    //         }
+    //     }
+        
 
-    if(counter == 0)
-    {
-        //Read mapOne, Save mapTwo
-        imageStore(mapTwo,pos,vec4(in_one,0,0,0));
+    //     counter = counter + 1;
+    // }
+    // else
+    // {
+    //     //Read mapTwo, Save mapOne
+    //     // imageStore(mapOne,pos,vec4(in_two+1,0,0,0));
+    //     if(in_two == 0)
+    //     {
+    //         ivec2 tempPos = pos;
+    //         if(tempPos.x -1 >=0)
+    //         {
+    //             tempPos.x = tempPos.x - 1;
+    //             if(imageLoad(mapTwo, tempPos).r == 1)
+    //             {
+    //                 imageStore(mapOne,pos,vec4(1,0,0,0));
+    //             }
+    //             else
+    //             {
+    //                 imageStore(mapOne,pos,vec4(0,0,0,0));
+    //             }
+    //         }
+    //         else
+    //         {
+    //             imageStore(mapOne,pos,vec4(0,0,0,0));
+    //         }
+    //     }
+    //     else// if(in_two == 1)
+    //     {
+    //         ivec2 tempPos = pos;
+    //         if(tempPos.x +1 <dims.x)
+    //         {
+    //             tempPos.x = tempPos.x + 1;
+    //             if(imageLoad(mapTwo, tempPos).r == 0)
+    //             {
+    //                 imageStore(mapOne,pos,vec4(0,0,0,0));
+    //             }
+    //             else
+    //             {
+    //                 imageStore(mapOne,pos,vec4(1,0,0,0));
+    //             }
+    //         }
+    //     }
 
-        counter = counter + 1;
-    }
-    else
-    {
-        //Read mapTwo, Save mapOne
-        imageStore(mapOne,pos,vec4(in_two+1,0,0,0));
-
-        counter = 0;
-    }
+    //     counter = 0;
+    // }
     
     
 
-}
+//}
