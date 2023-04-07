@@ -16,7 +16,7 @@ class Shader
     /* Variables */
     unsigned int shaderProgramID;    //Program ID
     unsigned int quadVAO = 0;
-    unsigned int quadVBO;
+    unsigned int quadVBO = 0;
 public:
     /* Constructors */
     Shader(const char* vertexShaderPath, const char* fragmentShaderPath);   //Read from file, compile and link
