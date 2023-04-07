@@ -52,7 +52,7 @@ ComputeShader::ComputeShader(const char* path, glm::uvec2 size)
 
     // create empty texture
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size.x, size.y, 0, GL_RED, GL_FLOAT, NULL);
-    glUniform1i(glGetUniformLocation(id, "mapOne"), 0);
+    glUniform1f(glGetUniformLocation(id, "mapOne"), 0);
     glUseProgram(0);
     glUseProgram(id);
     // Map 2
@@ -66,12 +66,12 @@ ComputeShader::ComputeShader(const char* path, glm::uvec2 size)
 
     // create empty texture
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size.x, size.y, 0, GL_RED, GL_FLOAT, NULL);
-    glUniform1i(glGetUniformLocation(id, "mapTwo"), 1);
+    glUniform1f(glGetUniformLocation(id, "mapTwo"), 1);
 
     glUseProgram(id);
     // Map 3
     glGenTextures(1, &mapThree);
-    glActiveTexture(GL_TEXTURE1);
+    glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, mapThree);
 
     // turns out we need this. huh.
@@ -80,11 +80,11 @@ ComputeShader::ComputeShader(const char* path, glm::uvec2 size)
 
     // create empty texture
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size.x, size.y, 0, GL_RED, GL_FLOAT, NULL);
-    glUniform1i(glGetUniformLocation(id, "mapThree"), 2);
+    glUniform1f(glGetUniformLocation(id, "mapThree"), 2);
 
     // Map 4
     glGenTextures(1, &mapFour);
-    glActiveTexture(GL_TEXTURE1);
+    glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, mapFour);
 
     // turns out we need this. huh.
@@ -93,21 +93,11 @@ ComputeShader::ComputeShader(const char* path, glm::uvec2 size)
 
     // create empty texture
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size.x, size.y, 0, GL_RED, GL_FLOAT, NULL);
-    glUniform1i(glGetUniformLocation(id, "mapFour"), 3);
-
-
-    // Counter in buffer
-    int counter = 0;
-    GLuint ssbo;    // Shader storage buffer object
-    glGenBuffers(1, &ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(counter), &counter, GL_DYNAMIC_READ);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);  // unbind
+    glUniform1f(glGetUniformLocation(id, "mapFour"), 3);
 
     // Mu
     glGenTextures(1, &muMap);
-    glActiveTexture(GL_TEXTURE1);
+    glActiveTexture(GL_TEXTURE4);
     glBindTexture(GL_TEXTURE_2D, muMap);
 
     // turns out we need this. huh.
@@ -116,11 +106,11 @@ ComputeShader::ComputeShader(const char* path, glm::uvec2 size)
 
     // create empty texture
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size.x, size.y, 0, GL_RED, GL_FLOAT, NULL);
-    glUniform1i(glGetUniformLocation(id, "muMap"), 5);
+    glUniform1f(glGetUniformLocation(id, "muMap"), 4);
 
     // Rho
     glGenTextures(1, &rhoMap);
-    glActiveTexture(GL_TEXTURE1);
+    glActiveTexture(GL_TEXTURE5);
     glBindTexture(GL_TEXTURE_2D, rhoMap);
 
     // turns out we need this. huh.
@@ -129,7 +119,17 @@ ComputeShader::ComputeShader(const char* path, glm::uvec2 size)
 
     // create empty texture
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size.x, size.y, 0, GL_RED, GL_FLOAT, NULL);
-    glUniform1i(glGetUniformLocation(id, "rhoMap"), 5);
+    glUniform1f(glGetUniformLocation(id, "rhoMap"), 5);
+
+
+
+    // Counter in buffer
+    glGenBuffers(1, &ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(shaderStorageBuffer), &shaderStorageBuffer, GL_DYNAMIC_READ);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);  // unbind
+
 }
 
 /* --- Use compute shader ---*/
@@ -138,14 +138,16 @@ void ComputeShader::use()
     glUseProgram(id);
     glBindImageTexture(0, mapOne, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
     glBindImageTexture(1, mapTwo, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
-    glBindImageTexture(1, mapThree, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
-    glBindImageTexture(1, mapFour, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    glBindImageTexture(2, mapThree, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    glBindImageTexture(3, mapFour, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    glBindImageTexture(4, muMap, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
+    glBindImageTexture(5, rhoMap, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
 
 }
 
 void ComputeShader::dispatch() {
     // 2D work group
-    glDispatchCompute(work_size.x, work_size.y, 1);
+    glDispatchCompute(work_size.x/10, work_size.y/10, 1);
 }
 
 void ComputeShader::wait()
@@ -169,8 +171,9 @@ void ComputeShader::set_values(std::vector<std::vector<float>>& values)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, work_size.x, work_size.y, 0, GL_RED, GL_FLOAT, data.data());
 }
 
-void ComputeShader::get_values(std::vector<std::vector<float>>& values)
+void ComputeShader::get_values(std::vector<std::vector<float>>& values, GLenum texture)
 {
+    glActiveTexture(texture);
     unsigned int collection_size = work_size.x * work_size.y;
     std::vector<float> compute_data(collection_size);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, compute_data.data());

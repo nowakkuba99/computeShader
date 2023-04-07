@@ -97,7 +97,21 @@ public:
      * 
      * @return Vector of float data from texture
     */
-    void get_values(std::vector<std::vector<float>>& values);
+    void get_values(std::vector<std::vector<float>>& values, GLenum texture);
+
+    auto increase_map_counter() -> void 
+    {  
+        ++shaderStorageBuffer.count;
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+        GLvoid* p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+        memcpy(p, &shaderStorageBuffer, sizeof(shaderStorageBuffer));
+        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    }
+
+    inline auto getTexture() const -> unsigned int
+    {
+        return mapOne;
+    }
 
 private:
     glm::uvec2 work_size;
@@ -107,6 +121,22 @@ private:
     unsigned int mapTwo;
     unsigned int mapThree;
     unsigned int mapFour;
+    // Shader storage buffer
+    struct shader_storage_buffer
+    {
+        int count = 0;
+        float measurements[20];
+        float extortion = 0;
+
+        shader_storage_buffer()
+        {
+            for (size_t it = 0; it < 20; ++it)
+            {
+                measurements[it] = 0;
+            }
+        }
+    } shaderStorageBuffer;
+    GLuint ssbo;
     // Mu parameter map
     unsigned int muMap;
     unsigned int rhoMap;
