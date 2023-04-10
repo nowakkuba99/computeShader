@@ -101,16 +101,20 @@ public:
 
     auto increase_map_counter() -> void 
     {  
+        // Read and write back to shader storage buffer
         ++shaderStorageBuffer.count;
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-        GLvoid* p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+        GLvoid* p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+        shader_storage_buffer test;
+        memcpy(&test, p, sizeof(test));
+        std::cout << test.count << std::endl;
         memcpy(p, &shaderStorageBuffer, sizeof(shaderStorageBuffer));
         glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
     }
 
     inline auto getTexture() const -> unsigned int
     {
-        return mapOne;
+        return mapTwo;
     }
 
 private:

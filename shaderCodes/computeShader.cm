@@ -28,3 +28,97 @@ void main() {
     // store new value in image
     imageStore( out_tex, pos, vec4( in_val + 1, 0.0, 0.0, 0.0 ) );
 }
+
+
+    // // get value stored in the image
+    // float in_one = imageLoad(mapOne, pos).r;
+    // float in_two = imageLoad(mapTwo, pos).r;
+    // float in_three = imageLoad(mapThree, pos).r;
+    // if(counter == 0)
+    // {
+    //     //Read mapOne, Save mapTwo
+    //     // imageStore(mapTwo,pos,vec4(in_one,0,0,0));
+    //     if(in_one == 0)
+    //     {
+    //         ivec2 tempPos = pos;
+    //         if((tempPos.x -1) >=0)
+    //         {
+    //             tempPos.x = tempPos.x - 1;
+    //             float leftVal = imageLoad(mapOne, tempPos).r;
+    //             if(leftVal == 1)
+    //             {
+    //                 imageStore(mapTwo,pos,vec4(1,0,0,0));
+    //             }
+    //             else
+    //             {
+    //                 imageStore(mapTwo,pos,vec4(0,0,0,0));
+    //             }
+    //         }
+    //     }
+    //     else// if(in_one == 1)
+    //     {
+    //         ivec2 tempPos = pos;
+    //         if((tempPos.x + 1) < dims.x)
+    //         {
+    //             tempPos.x = tempPos.x + 1;
+    //             if(imageLoad(mapOne, tempPos).r == 0)
+    //             {
+    //                 imageStore(mapTwo,pos,vec4(0,0,0,0));
+    //             }
+    //             else
+    //             {
+    //                 imageStore(mapTwo,pos,vec4(1,0,0,0));
+    //             }
+    //         }
+    //     }
+        
+
+    //     counter = counter + 1;
+    // }
+    // else
+    // {
+    //     //Read mapTwo, Save mapOne
+    //     // imageStore(mapOne,pos,vec4(in_two+1,0,0,0));
+    //     if(in_two == 0)
+    //     {
+    //         ivec2 tempPos = pos;
+    //         if(tempPos.x -1 >=0)
+    //         {
+    //             tempPos.x = tempPos.x - 1;
+    //             if(imageLoad(mapTwo, tempPos).r == 1)
+    //             {
+    //                 imageStore(mapOne,pos,vec4(1,0,0,0));
+    //             }
+    //             else
+    //             {
+    //                 imageStore(mapOne,pos,vec4(0,0,0,0));
+    //             }
+    //         }
+    //         else
+    //         {
+    //             imageStore(mapOne,pos,vec4(0,0,0,0));
+    //         }
+    //     }
+    //     else// if(in_two == 1)
+    //     {
+    //         ivec2 tempPos = pos;
+    //         if(tempPos.x +1 <dims.x)
+    //         {
+    //             tempPos.x = tempPos.x + 1;
+    //             if(imageLoad(mapTwo, tempPos).r == 0)
+    //             {
+    //                 imageStore(mapOne,pos,vec4(0,0,0,0));
+    //             }
+    //             else
+    //             {
+    //                 imageStore(mapOne,pos,vec4(1,0,0,0));
+    //             }
+    //         }
+    //     }
+
+    //     counter = 0;
+    // }
+    
+    
+
+//}
