@@ -18,7 +18,7 @@ auto TextRenderer::initFreetype(const char* path) -> int
         return -1;
     }
     // Define pixel font size for extraction
-    FT_Set_Pixel_Sizes(face, 0, 24);    //(face,width,height) -> width = 0 means automatic calcuation based on height
+    FT_Set_Pixel_Sizes(face, 0, 20);    //(face,width,height) -> width = 0 means automatic calcuation based on height
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     for (unsigned char c = 0; c < 128; ++c)
