@@ -2,147 +2,183 @@
 
 
 layout(local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
-layout(r32f) uniform image2D mapOne;
-layout(r32f) uniform image2D mapTwo;
-layout(r32f) uniform image2D mapThree;
-layout(r32f) uniform image2D mapFour;
-layout(r32f) uniform image2D muMap;
-layout(r32f) uniform image2D rhoMap;
+layout(r32f, binding = 0) uniform image2D mapOne;
+layout(r32f, binding = 1) uniform image2D mapTwo;
+layout(r32f, binding = 2) uniform image2D mapThree;
+layout(r32f, binding = 3) uniform image2D mapFour;
+layout(r32f, binding = 4) uniform image2D muMap;
+layout(r32f, binding = 5) uniform image2D rhoMap;
 layout(std430, binding = 6) buffer shaderStorageBuffer
 {
-    int counter;
-    float measurements_data[20];
-    float extortion;
+    int counter;                    // Count for choosing Read/Write scheme
+    float measurements_data[20];    // Array to save measurements into
+    float extortion;                // Extortion value
 };
 
+/*  --- Functions definitions --- */
+// Input
+float loadPrevious  (int pickCounter, ivec2 position);
+float loadCurrent   (int pickCounter, ivec2 position);
+float loadMu        (ivec2 position);
+float loadRho       (ivec2 position);
+// Output
+void saveNext       (int pickCounter, float value, ivec2 pos);
+// Check if grid
+bool checkIfGrid(ivec2 position);
 
+/* --- Main function --- */
+// Perform calculations only for the grid without borders which are air cells
 void main() 
 {
-    // get position to read/write data from
+    // Get position to read/write data from
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    // Get the dimensions of the grid
     ivec2 dims = imageSize(mapOne);
+    // Load displacement maps
+    float w_previous    = loadPrevious(counter,pos);
+    float w_current     = loadCurrent(counter,pos);
+    float w_5           = loadCurrent(counter,ivec2(pos.x+1,pos.y));
+    float w_7           = loadCurrent(counter,ivec2(pos.x-1,pos.y));
+    float w_6           = loadCurrent(counter,ivec2(pos.x,pos.y+1));
+    float w_8           = loadCurrent(counter,ivec2(pos.x,pos.y-1));
+    // // Load params
+    float mu_1          = loadMu(pos);
+    float mu_2          = loadMu(ivec2(pos.x-1,pos.y));
+    float mu_3          = loadMu(ivec2(pos.x-1,pos.y-1));
+    float mu_4          = loadMu(ivec2(pos.x,pos.y-1));
+
+    /* TEST CODE */
     float in_one = imageLoad(mapOne, pos).r;
     float in_two = imageLoad(mapTwo, pos).r;
     float in_three = imageLoad(mapThree, pos).r;
-    if(in_one >= 1)
-        in_one = -1;
-    imageStore(mapOne,pos,vec4(in_one + 0.0001,0,0,0));
+    float in_four = imageLoad(mapFour, pos).r;
+    if(in_two >= 1)
+        in_two = -1;
+    if(checkIfGrid(pos))
+    {
+        imageStore(mapTwo,pos,vec4(in_two + 0.0001,0,0,0));
+    }    
+    else
+    {
+        imageStore(mapTwo,pos,vec4(-1.0f,0,0,0));
+    }
+
     
 }
-    /*
-        --- Count = 1 ---
+
+/* --- Helper functions --- */
+/*
+        --- Count = 0 ---
         1: Previous -> READ ONLY
         2: Current -> READ ONLY
         3: Next -> WRITE
         4: Unused
-        --- Count = 2 ---
+        --- Count = 1 ---
         1: Unused
         2: Previous -> READ ONLY
         3: Current -> READ ONLY
         4: Next -> WRITE
-        --- Count = 3 ---
+        --- Count = 2 ---
         1: Next -> WRITE
         2: Unused
         3: Previous -> READ ONLY
         4: Current - READ ONLY
-        --- Count = 4 ---
+        --- Count = 3 ---
         1: Current -> READ ONLY
         2: Next -> WRITE
         3: Unused
         4: Previous -> READ ONLY
         --- REPEAT ---
-    */
+*/
+/* 
+   ------------------------------------ 
+            Load input and
+              save output 
+   ------------------------------------
+*/
+float loadPrevious(int pickCounter,ivec2 position)
+{
+    if(pickCounter == 0)
+    {
+        return imageLoad(mapOne, position).r;
+    }
+    else if(pickCounter == 1)
+    {
+        return imageLoad(mapTwo, position).r;
+    }
+    else if(pickCounter == 2)
+    {
+        return imageLoad(mapThree, position).r;
+    }
+    else if(pickCounter == 3)
+    {
+        return imageLoad(mapFour, position).r;
+    }
+    else return -1.0f;
+}
+float loadCurrent(int pickCounter, ivec2 position)
+{
+    if(pickCounter == 0)
+    {
+        return imageLoad(mapTwo, position).r;
+    }
+    else if(pickCounter == 1)
+    {
+        return imageLoad(mapThree, position).r;
+    }
+    else if(pickCounter == 2)
+    {
+        return imageLoad(mapFour, position).r;
+    }
+    else if(pickCounter == 3)
+    {
+        return imageLoad(mapOne, position).r;
+    }
+    else return -1.0f;
+}
+void saveNext(int pickCounter, float value, ivec2 position)
+{
+    if(pickCounter == 0)
+    {
+        imageStore(mapThree,position,vec4(value,0,0,0));
+    }
+    else if(pickCounter == 1)
+    {
+        imageStore(mapFour,position,vec4(value,0,0,0));
+    }
+    else if(pickCounter == 2)
+    {
+        imageStore(mapOne,position,vec4(value,0,0,0));
+    }
+    else if(pickCounter == 3)
+    {
+        imageStore(mapTwo,position,vec4(value,0,0,0));
+    }
+    else
+    {
+        imageStore(mapOne,position,vec4(-1,0,0,0));
+    }
+}
+float loadMu(ivec2 position)
+{
+    return imageLoad(muMap, position).r;
+} 
+float loadRho(ivec2 position)
+{
+    return imageLoad(rhoMap, position).r;
+}
+/* --- Check if specimen or air cell --- */
+bool checkIfGrid(ivec2 position)
+{
+    // Get the dimensions of the grid
+    ivec2 dims = imageSize(mapOne);
 
-
-    // // get value stored in the image
-    // float in_one = imageLoad(mapOne, pos).r;
-    // float in_two = imageLoad(mapTwo, pos).r;
-    // float in_three = imageLoad(mapThree, pos).r;
-    // if(counter == 0)
-    // {
-    //     //Read mapOne, Save mapTwo
-    //     // imageStore(mapTwo,pos,vec4(in_one,0,0,0));
-    //     if(in_one == 0)
-    //     {
-    //         ivec2 tempPos = pos;
-    //         if((tempPos.x -1) >=0)
-    //         {
-    //             tempPos.x = tempPos.x - 1;
-    //             float leftVal = imageLoad(mapOne, tempPos).r;
-    //             if(leftVal == 1)
-    //             {
-    //                 imageStore(mapTwo,pos,vec4(1,0,0,0));
-    //             }
-    //             else
-    //             {
-    //                 imageStore(mapTwo,pos,vec4(0,0,0,0));
-    //             }
-    //         }
-    //     }
-    //     else// if(in_one == 1)
-    //     {
-    //         ivec2 tempPos = pos;
-    //         if((tempPos.x + 1) < dims.x)
-    //         {
-    //             tempPos.x = tempPos.x + 1;
-    //             if(imageLoad(mapOne, tempPos).r == 0)
-    //             {
-    //                 imageStore(mapTwo,pos,vec4(0,0,0,0));
-    //             }
-    //             else
-    //             {
-    //                 imageStore(mapTwo,pos,vec4(1,0,0,0));
-    //             }
-    //         }
-    //     }
-        
-
-    //     counter = counter + 1;
-    // }
-    // else
-    // {
-    //     //Read mapTwo, Save mapOne
-    //     // imageStore(mapOne,pos,vec4(in_two+1,0,0,0));
-    //     if(in_two == 0)
-    //     {
-    //         ivec2 tempPos = pos;
-    //         if(tempPos.x -1 >=0)
-    //         {
-    //             tempPos.x = tempPos.x - 1;
-    //             if(imageLoad(mapTwo, tempPos).r == 1)
-    //             {
-    //                 imageStore(mapOne,pos,vec4(1,0,0,0));
-    //             }
-    //             else
-    //             {
-    //                 imageStore(mapOne,pos,vec4(0,0,0,0));
-    //             }
-    //         }
-    //         else
-    //         {
-    //             imageStore(mapOne,pos,vec4(0,0,0,0));
-    //         }
-    //     }
-    //     else// if(in_two == 1)
-    //     {
-    //         ivec2 tempPos = pos;
-    //         if(tempPos.x +1 <dims.x)
-    //         {
-    //             tempPos.x = tempPos.x + 1;
-    //             if(imageLoad(mapTwo, tempPos).r == 0)
-    //             {
-    //                 imageStore(mapOne,pos,vec4(0,0,0,0));
-    //             }
-    //             else
-    //             {
-    //                 imageStore(mapOne,pos,vec4(1,0,0,0));
-    //             }
-    //         }
-    //     }
-
-    //     counter = 0;
-    // }
-    
-    
-
-//}
+    if(position.x > 0 && position.x < (dims.x-1))
+    {
+        if(position.y > 0 && position.y < (dims.y-1))
+        {
+            return true;
+        }
+    }
+    return false;
+}
