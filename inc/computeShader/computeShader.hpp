@@ -86,7 +86,7 @@ public:
      * 
      * @return -
     */
-    void set_values(std::vector<std::vector<float>>& values);
+    void set_values(std::vector<std::vector<float>>& values, GLenum texture);
 
     /**
      * Get values from buffer texture object.
@@ -99,23 +99,35 @@ public:
     */
     void get_values(std::vector<std::vector<float>>& values, GLenum texture);
 
-    auto increase_map_counter() -> void 
-    {  
-        // Read and write back to shader storage buffer
-        ++shaderStorageBuffer.count;
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-        GLvoid* p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
-        shader_storage_buffer test;
-        memcpy(&test, p, sizeof(test));
-        std::cout << test.count << std::endl;
-        memcpy(p, &shaderStorageBuffer, sizeof(shaderStorageBuffer));
-        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-    }
+    /**
+     * Handles SSBO managemet.
+     *
+     * Function updates counter, updates extortion, reads measurements data etc.
+     *
+     * @param -
+     *
+     * @return Vector of measured values along the top of the simulated plate.
+    */
+    auto update_ssbo(float extortionValue) -> std::vector<float>;
+private:
+    // SSBO managemnt helper functions
+    // Increase the counter from 0 up to 3 and reapeat
+    auto increase_map_counter() -> void;
+    // Create vector to return from update function
+    auto createVectorFromArray(std::vector<float>& vecToSave) const -> void;
 
-    inline auto getTexture() const -> unsigned int
-    {
-        return mapTwo;
-    }
+public:
+    /**
+     * Loads and sets correct textures for display pourposes.
+     *
+     * Based on counter, used by shader function activates texture that is a
+     * current displacement map.
+     *
+     * @param -
+     *
+     * @return Active texture number to be set by display shader.
+    */
+    auto getTexture() const -> unsigned int;
 
 private:
     glm::uvec2 work_size;
@@ -128,9 +140,10 @@ private:
     // Shader storage buffer
     struct shader_storage_buffer
     {
-        int count = 0;
-        float measurements[20];
-        float extortion = 0;
+        int     count = 0;
+        float   measurements[20];
+        float   extortion = 0;
+        int     extortionPlacement = 0;
 
         shader_storage_buffer()
         {
