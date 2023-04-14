@@ -7,7 +7,7 @@
 
 #ifndef functions_h
 #define functions_h
-
+#define _USE_MATH_DEFINES
 #include <vector>
 #include <math.h>
 

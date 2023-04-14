@@ -5,11 +5,12 @@
 //  Created by Jakub Nowak on 12/03/2023.
 //
 #include <iostream>
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <cmath>
-#include <matplot/matplot.h>
+#include <algorithm>
 
-#include "solver.hpp"
+#include "../../inc/solver/solver.hpp"
 namespace LISA_SH
 {
 /* --------- Singelton instance getter ---------*/
@@ -82,7 +83,7 @@ void Solver::initExtortionSingleSin(unsigned int length)
 {
     struct timeVec
     {
-        float currTime;
+        float currTime = 0;
         float dt;
         
         timeVec(float dt_s) : dt(dt_s) {};

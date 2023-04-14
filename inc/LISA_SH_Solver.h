@@ -7,11 +7,11 @@
 
 #ifndef LISA_SH_Solver_h
 #define LISA_SH_Solver_h
-
+#include <string>
 /* All includes for project */
-#include "../src/solver/solver.hpp"
-#include "../src/settings/settings.h"
-#include "../src/functions/functions.h"
+#include "solver/solver.hpp"
+#include "settings/settings.h"
+#include "functions/functions.h"
 /* Banner */
 const std::string banner =
 R"(
@@ -35,6 +35,5 @@ ________  ________  ___       ___      ___ _______   ________
  \|_________|
 )";
 
-inline void addBrewToPATH() {setenv("PATH", "/Applications/Xcode.app/Contents/Developer/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin", 1);};
 
 #endif /* LISA_SH_Solver_h */
