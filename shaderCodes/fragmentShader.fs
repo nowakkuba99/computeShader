@@ -28,7 +28,10 @@ void main()
     // Normalize
     //  scaledValue = (rawValue - min) / (max - min);
     // min = -1, max = 1
-    texCol = (texCol - (-1)) / (1 - (-1));
+    texCol = texCol;
+    float minLim = -1e-6;
+    float maxLim = 1e-6;
+    texCol = (texCol - minLim) / (maxLim - minLim);
     FragColor = vec4(colormap(texCol));
 }
 

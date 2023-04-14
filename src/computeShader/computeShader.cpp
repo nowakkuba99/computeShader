@@ -147,7 +147,7 @@ void ComputeShader::use()
 
 void ComputeShader::dispatch() {
     // 2D work group
-    glDispatchCompute(work_size.x/10, work_size.y/10, 1);
+    glDispatchCompute(work_size.x/174, work_size.y/2, 1);
 }
 
 void ComputeShader::wait()
@@ -155,17 +155,17 @@ void ComputeShader::wait()
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
 }
 
-void ComputeShader::set_values(std::vector<std::vector<float>>& values) 
+void ComputeShader::set_values(std::vector<std::vector<float>>& values, GLenum texture)
 {
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(texture);
     // Compress into 1D vector
     unsigned int totalLenght = work_size.x * work_size.y;
     std::vector<float> data(totalLenght);
     auto it = data.begin();
-    for (int i = 0; i < work_size.x; ++i)
+    for (int i = 0; i < work_size.y; ++i)
     {
         std::copy(values[i].begin(), values[i].end(), it);
-        it += work_size.y;
+        it += work_size.x;
     }
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, work_size.x, work_size.y, 0, GL_RED, GL_FLOAT, data.data());
@@ -179,9 +179,102 @@ void ComputeShader::get_values(std::vector<std::vector<float>>& values, GLenum t
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, compute_data.data());
     // Divide into 2D vector
     auto it = compute_data.begin();
-    for (int i = 0; i < work_size.x; ++i)
+    for (int i = 0; i < work_size.y; ++i)
     {
-        std::copy(it, it + work_size.y, values[i].begin());
-        it += work_size.y;
+        std::copy(it, it + work_size.x, values[i].begin());
+        it += work_size.x;
     }
 }
+_NODISCARD
+auto ComputeShader::update_ssbo(float extortionValue) -> std::vector<float>
+{
+    // Get handle to the SSBO
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    GLvoid* ssboHandle = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+    // Read data from SSBO
+    memcpy(&shaderStorageBuffer, ssboHandle, sizeof(shaderStorageBuffer));
+    std::vector<float> measurementsData(20);
+    createVectorFromArray(measurementsData);
+    // Prepare new values to write to SSBO
+    increase_map_counter();
+    shaderStorageBuffer.extortionPlacement = 15;
+    shaderStorageBuffer.extortion = extortionValue;
+    // Write data to SSBO
+    memcpy(ssboHandle, &shaderStorageBuffer, sizeof(shaderStorageBuffer));
+    // Delete handle to SSBO
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    return measurementsData;
+}
+
+auto ComputeShader::increase_map_counter() -> void
+{
+    if (shaderStorageBuffer.count < 3)
+    {
+        ++shaderStorageBuffer.count;
+    }
+    else
+    {
+        shaderStorageBuffer.count = 0;
+    }
+}
+inline auto ComputeShader::createVectorFromArray(std::vector<float>& vecToSave) const -> void
+{
+    std::copy(&shaderStorageBuffer.measurements[0], &shaderStorageBuffer.measurements[20], vecToSave.begin());
+}
+auto ComputeShader::getTexture() const -> unsigned int
+{
+    // Get the handle to the current displacement map
+    if (shaderStorageBuffer.count == 0)
+    {
+        glActiveTexture(GL_TEXTURE1);   // Map2
+        glBindTexture(GL_TEXTURE_2D, mapTwo);
+        return 1;
+    }
+    else if (shaderStorageBuffer.count == 1)
+    {
+        glActiveTexture(GL_TEXTURE2);   // Map3
+        glBindTexture(GL_TEXTURE_2D, mapThree);
+        return 2;
+    }
+    else if (shaderStorageBuffer.count == 2)
+    {
+        glActiveTexture(GL_TEXTURE3);   // Map4
+        glBindTexture(GL_TEXTURE_2D, mapFour);
+        return 3;
+    }
+    else if (shaderStorageBuffer.count == 3)
+    {
+        glActiveTexture(GL_TEXTURE0);   // Map1
+        glBindTexture(GL_TEXTURE_2D, mapOne);
+        return 0;
+    }
+    else
+    {
+        std::cerr << "Unknown counter value!\n";
+        return 0;
+    }
+}
+// COUNTER READ/WRITE RULES
+/*
+        --- Count = 0 ---
+        1: Previous -> READ ONLY
+        2: Current -> READ ONLY
+        3: Next -> WRITE
+        4: Unused
+        --- Count = 1 ---
+        1: Unused
+        2: Previous -> READ ONLY
+        3: Current -> READ ONLY
+        4: Next -> WRITE
+        --- Count = 2 ---
+        1: Next -> WRITE
+        2: Unused
+        3: Previous -> READ ONLY
+        4: Current - READ ONLY
+        --- Count = 3 ---
+        1: Current -> READ ONLY
+        2: Next -> WRITE
+        3: Unused
+        4: Previous -> READ ONLY
+        --- REPEAT ---
+*/

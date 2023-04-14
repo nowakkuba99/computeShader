@@ -109,10 +109,11 @@ struct grid
     
     //Constructor
     inline grid(float dx_meters, float dy_meters, float xLength_meters, float yLength_meters)
-    : dx(dx_meters), dy(dy_meters),
-      dxSquare(dx_meters*dx_meters), dySquare(dy_meters*dy_meters),
-      dxCube(dx_meters*dx_meters*dx_meters), dyCube(dy_meters*dy_meters*dy_meters),
-      xGridSize(xLength_meters/dx_meters + 3), yGridSize(yLength_meters/dy_meters + 3)
+    : 
+        dx(dx_meters), dy(dy_meters),
+        dxSquare(dx_meters*dx_meters), dySquare(dy_meters*dy_meters),
+        dxCube(dx_meters*dx_meters*dx_meters), dyCube(dy_meters*dy_meters*dy_meters),
+        xGridSize(xLength_meters/dx_meters + 3), yGridSize(yLength_meters/dy_meters + 3)
     {};
 };
 struct material
@@ -123,7 +124,8 @@ struct material
     //Constructor
     inline material(float youngModulus_Pa, float poisson, float density_kg_m3)
     :
-    rho(density_kg_m3), mu(youngModulus_Pa/(2*(1+poisson)))
+        rho(density_kg_m3),
+        mu(youngModulus_Pa/(2*(1+poisson)))
     {};
 };
 struct time
@@ -136,8 +138,10 @@ struct time
     //Constructor
     inline time(float dt_seconds, float simulationTime_seconds)
     :
-    dt(dt_seconds), dtSquared(dt_seconds*dt_seconds), simulationTime(simulationTime_seconds),
-    numberOfTimeSteps(simulationTime_seconds/dt_seconds)
+        dt(dt_seconds),
+        dtSquared(dt_seconds*dt_seconds), 
+        simulationTime(simulationTime_seconds),
+        numberOfTimeSteps(simulationTime_seconds/dt_seconds)
     {};
 };
 

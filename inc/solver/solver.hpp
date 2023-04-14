@@ -86,6 +86,7 @@ protected:
 
 private:
     // Member variables settings
+public:
     solverSettings  m_Settings;
     time            m_TimeSet;
     material        m_MaterialSet;
@@ -95,8 +96,9 @@ private:
     std::unique_ptr<std::vector<std::vector<float>>>            p_CurrDisplacement;
     std::unique_ptr<std::vector<std::vector<float>>>            p_NextDisplacement;
     // Distortion variable
+public:
     std::unique_ptr<std::vector<float>>                         p_Extortion;
-    
+private:
     /* PRIVATE FUNCTIONS */
     void initExtortionSingleSin(unsigned int length);
     void initExtortionWaveMix(unsigned int length);

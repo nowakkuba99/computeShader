@@ -17,10 +17,13 @@
 #include "../inc/shader/shader.hpp"
 #include "../inc/shader/Textshader.hpp"
 #include "../inc/computeShader/computeShader.hpp"
+#include "../inc/LISA_SH_Solver.h"
 
 
 int main()
 {
+    /* Display banner */
+    std::cout << banner << std::endl;
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);    //OpenGl does not support compute shaders on macos -> Translate to Metal API
@@ -80,19 +83,43 @@ int main()
 
     std::cout << "Number of invocations in a single local work group that may be dispatched to a compute shader " << max_compute_work_group_invocations << std::endl;
     */
+
+    /* SOLVER ELEMENTS */
+    LISA_SH::solverSettings settings;
+    LISA_SH::Solver* solver = LISA_SH::Solver::getInstance(settings);
+
+    solver->initSolver();
+
+    auto it = solver->p_Extortion.get()->begin();
+
     /* Compute shader creation */
-    constexpr auto X_SIZE = 10;
-    constexpr auto Y_SIZE = 10;
-    ComputeShader compShader("shaderCodes/computeShader.comp", glm::uvec2(X_SIZE,Y_SIZE)); // One 2D texture
+    constexpr auto X_SIZE = 4002;
+    constexpr auto Y_SIZE = 22;
+    ComputeShader compShader("shaderCodes/computeShader.comp", glm::uvec2(X_SIZE,Y_SIZE));
     compShader.use();
     
-    // Create input vector -> With initial displacement
-    std::vector<std::vector<float>> values(X_SIZE, std::vector<float>(Y_SIZE, 0));
-    for (auto& vec : values)
+    // Create input vectors
+    // Mu map
+    std::vector<std::vector<float>> values(Y_SIZE, std::vector<float>(X_SIZE, 0));
+    for (size_t row = 1; row < Y_SIZE-2; ++row)
     {
-        vec[0] = 0;//1
+        for (size_t col = 1; col < X_SIZE-2; ++col)
+        {
+             values[row][col] = solver->m_MaterialSet.mu;
+        }
     }
-    compShader.set_values(values);
+    compShader.set_values(values,GL_TEXTURE4);
+    values.clear();
+    values = std::vector<std::vector<float>>(Y_SIZE, std::vector<float>(X_SIZE, 0));
+    // Rho map
+    for (size_t row = 1; row < Y_SIZE-2; ++row)
+    {
+        for (size_t col = 1; col < X_SIZE-2; ++col)
+        {
+            values[row][col] = solver->m_MaterialSet.rho;
+        }
+    }
+    compShader.set_values(values, GL_TEXTURE5);
     std::cout<<"Created using OpenGL: " << glGetString(GL_VERSION) << std::endl;
 
     /* Vertex and Fragment shader creation for display pourposes */
@@ -100,10 +127,14 @@ int main()
     shader.makeActive();
     shader.setInt("tex", 0);
 
+
 /* Main loop */
+    std::cout << "Measure time for 10 000 iterations\n";
+    auto startTime = glfwGetTime();
+    std::cout << "Start time: " << startTime << "\n";
     /* Renders each frame with each iteration */
     int counter = 0;
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(window) && counter < 10000)
     {
         /* Input handling */
         app.processInput(window); // Get user input and process it
@@ -113,47 +144,33 @@ int main()
          compShader.dispatch();
          compShader.wait();
 
-
-         /* DEBUG DISPLAY VALUES */
-         /*
-         compShader.get_values(values, GL_TEXTURE0);
-         std::cout << "Map 1" << std::endl;
-         std::cout << values[0][0] << "  " << values[0][1] << "...\n";
-         std::cout << values[1][0] << "  " << values[1][1] << "...\n";
-         std::cout<<std::endl;
-         compShader.get_values(values, GL_TEXTURE1);
-         std::cout << "Map 2" << std::endl;
-         std::cout << values[0][0] << "  " << values[0][1] << "...\n";
-         std::cout << values[1][0] << "  " << values[1][1] << "...\n";
-         std::cout << std::endl;
-         */
-
         /* Start rendering */
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Set color that will be set with clear command
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the depth buffer
         
         /* Active correct map based on counter */
         shader.makeActive();
-        shader.setInt("tex", 1);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D,compShader.getTexture());
+        int currentDisplacementTexture = compShader.getTexture();
+        shader.setInt("tex", currentDisplacementTexture);
         /* Render displacement map */
         shader.renderQuad();
         /* Render text information */
         std::string label = "Loop: " + std::to_string(counter) + "/ who knows?";
-        textShader.RenderText(label , 2.0f, 10.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
-        textShader.RenderText("(C) Jakub Nowak 2023", 600.0f, 580.0f, 0.75f, glm::vec3(1.0f, 1.0f, 1.0f));
+        textShader.RenderText(label , 2.0f, 10.0f, 1.0f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
+        textShader.RenderText("(C) Jakub Nowak 2023", 600.0f, 580.0f, 0.75f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
 
         /* OpenGL buffer swap and event poll */
         glfwSwapBuffers(window); // Swap current pixels values for the window
         glfwPollEvents(); // Check for events (e.g. keyboard interupts etc.) and calls callbacks
 
         /* Counters incrementation */
-        compShader.increase_map_counter();
+        compShader.update_ssbo(*it);
+        ++it;
         ++counter;
     }
-
+    std::cout << "End time: " << glfwGetTime() - startTime <<"\n";
 
     glfwTerminate(); // Clear/delete created objects
+    delete solver;
     return 0;
 }
