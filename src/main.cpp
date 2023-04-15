@@ -11,6 +11,9 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+// Images loader
+#define STB_IMAGE_IMPLEMENTATION
+#include "../inc/stb/stb_image.h"
 
 // User includes
 #include "../inc/app/application.hpp"
@@ -41,6 +44,13 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window); // Set the current window as current to render
+
+    // Load app icon
+    GLFWimage images[1];
+    images[0].pixels = stbi_load("C:/Users/nowak/source/repos/ComputeShader_LISA/images/agh2.png", &images[0].width, &images[0].height, 0, 4); //rgba channels 
+    glfwSetWindowIcon(window, 1, images);
+    stbi_image_free(images[0].pixels);
+
 
     /* GLAD initialization */
     if (app.initGLAD() == -1)
@@ -95,7 +105,7 @@ int main()
     /* Compute shader creation */
     constexpr auto X_SIZE = 4002;
     constexpr auto Y_SIZE = 22;
-    ComputeShader compShader("shaderCodes/computeShader.comp", glm::uvec2(X_SIZE,Y_SIZE));
+    ComputeShader compShader("shaderCodes/computeShader.comp", glm::uvec2(X_SIZE,Y_SIZE));      // Compute shader code choosed for corect model: linear/hysteresis etc.
     compShader.use();
     
     // Create input vectors
