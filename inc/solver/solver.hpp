@@ -10,14 +10,30 @@
 
 #include <vector>
 
+
+// OpenGL related includes
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+
+// Freetype libraries - text rendering
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
+// User includes
+#include "../app/application.hpp"
+#include "../shader/shader.hpp"
+#include "../shader/Textshader.hpp"
+#include "../computeShader/computeShader.hpp"
 #include "../settings/settings.h"
+
 namespace LISA_SH
 {
 class Solver
 {
 protected:
     // Protected constructor
-    inline Solver(solverSettings set)
+    inline Solver(solverSettings set, const int X_SIZE, const int Y_SIZE)
     :
     m_GridSet(set.dx_meters,set.dy_meters,set.specimenLength_meters, set.specimenThickness_meters),
     m_TimeSet(set.dt_seconds, set.simulationTime_seconds),
@@ -31,8 +47,17 @@ protected:
     // Instance
     static Solver*         m_Solver;
 public:
+    ~Solver()
+    {
+        if (p_TextShader != nullptr)
+            delete p_TextShader;
+        if (p_CompShader != nullptr)
+            delete p_CompShader;
+        if (p_Shader != nullptr)
+            delete p_Shader;
+    }
     // Singelton getter
-    static Solver* getInstance(solverSettings set);
+    static Solver* getInstance(solverSettings set, const int X_SIZE, const int Y_SIZE);
     
     /* ---------------------------------------------------------------------------- */
     /* ---------------------SPECIMEN INITIALIZATION FUNCTIONS---------------------- */
@@ -40,48 +65,34 @@ public:
     /**
         Function used to initialize solver elemets such as displacement arrays, constants etc.
      */
-    void initSolver();
+    auto initSolver() -> int;
+
     /**
-        Function used to start solver operation
-     */
+    *   Function used to start solver operation
+    *   @param: -
+    *   @return: -
+    */
     void solve();
 protected:
     /* ---------------------------------------------------------------------------- */
     /* ---------------------------SOlVER FUNCTIONS--------------------------------- */
     /* ---------------------------------------------------------------------------- */
-    /**
-        Function used to solve the current state of grid for linear definition
     
-        @param displacementPrevious The previous state of grid
-        @param displacementCurrent   The current state of grid
-        @param displacementNext          The address of buffet to wrtie to
-     */
-    void solveLinear(
-               std::shared_ptr<std::vector<std::vector<float>>> &displacementPrevious,
-               std::shared_ptr<std::vector<std::vector<float>>> &displacementCurrent,
-               std::shared_ptr<std::vector<std::vector<float>>> &displacementNext);
+    /**
+    *    Function used to solve the current state of grid for linear definition
+    *    @brief
+    *    @param: -
+    *    @return: -
+    */
+    void solveLinear();
     /**
         Function used to solve the current state of grid for linear definition with elastic hysteresis
-    
-        @param displacementPrevious The previous state of grid
-        @param displacementCurrent   The current state of grid
-        @param displacementNext          The address of buffet to wrtie to
      */
-    void solveNonlinearHysteresis_Elastic(
-               std::shared_ptr<std::vector<std::vector<float>>> &displacementPrevious,
-               std::shared_ptr<std::vector<std::vector<float>>> &displacementCurrent,
-               std::shared_ptr<std::vector<std::vector<float>>> &displacementNext);
+    void solveNonlinearHysteresis_Elastic();
     /**
         Function used to solve the current state of grid for nonlinear definition with inelastic hysteresis
-    
-        @param displacementPrevious The previous state of grid
-        @param displacementCurrent   The current state of grid
-        @param displacementNext          The address of buffet to wrtie to
      */
-    void solveNonlinearHysteresis_Inelastic(
-               std::shared_ptr<std::vector<std::vector<float>>> &displacementPrevious,
-               std::shared_ptr<std::vector<std::vector<float>>> &displacementCurrent,
-               std::shared_ptr<std::vector<std::vector<float>>> &displacementNext);
+    void solveNonlinearHysteresis_Inelastic();
     
 
 private:
@@ -91,17 +102,24 @@ public:
     time            m_TimeSet;
     material        m_MaterialSet;
     grid            m_GridSet;
-    // Displacement member variables
-    std::unique_ptr<std::vector<std::vector<float>>>            p_PrevDisplacement;
-    std::unique_ptr<std::vector<std::vector<float>>>            p_CurrDisplacement;
-    std::unique_ptr<std::vector<std::vector<float>>>            p_NextDisplacement;
+    int             m_X_SIZE;
+    int             m_Y_SIZE;
     // Distortion variable
 public:
-    std::unique_ptr<std::vector<float>>                         p_Extortion;
+    std::unique_ptr<std::vector<float>> p_Extortion;
+    // OpenGL related
+    Application                     m_App;
+    GLFWwindow*                     p_Window        = nullptr;
+    TextShader*                     p_TextShader    = nullptr;
+    ComputeShader*                  p_CompShader    = nullptr;
+    Shader*                         p_Shader        = nullptr;
 private:
     /* PRIVATE FUNCTIONS */
+    /* Extortion */
     void initExtortionSingleSin(unsigned int length);
     void initExtortionWaveMix(unsigned int length);
+    /* Compute shader and display */
+    void initOpenGL();
 };
 }   //LISA_SH namespace
 #endif /* solver_hpp */
