@@ -9,6 +9,7 @@
 #include <math.h>
 #include <cmath>
 #include <algorithm>
+#include <fstream>
 
 // Images loader
 #ifndef STB_IMAGE_IMPLEMENTATION
@@ -21,12 +22,10 @@ namespace LISA_SH
 {
 /* --------- Singelton instance getter ---------*/
 Solver* Solver::m_Solver = nullptr;
-Solver* Solver::getInstance(solverSettings set, const int X_SIZE, const int Y_SIZE)
+Solver* Solver::getInstance(solverSettings set)
 {
     if(m_Solver == nullptr)
-        m_Solver = new Solver(set,X_SIZE, Y_SIZE);
-    m_Solver->m_X_SIZE = X_SIZE;
-    m_Solver->m_Y_SIZE = Y_SIZE;
+        m_Solver = new Solver(set);
     return m_Solver;
 }
 /* --------- Initialize function ---------*/
@@ -66,74 +65,11 @@ auto Solver::initSolver() -> int
             return -1;
         }
     }
-    /* --------- Initialize OpenGL ---------*/
-    m_App.initGLFW();
-
-    /* Create window */
-    p_Window = glfwCreateWindow(800, 600, "LISA 2D SH Waves Solver", NULL, NULL); // Create window
-    if (p_Window == NULL)                                                           // Check if window properly created
+    if (initOpenGL() != 0)
     {
-        std::cout << "Failed to create window!\n";
-        glfwTerminate();
+        std::cerr << "Error while initializing OopenGL! \n";
         return -1;
     }
-    glfwMakeContextCurrent(p_Window); // Set the current window as current to render
-
-    /* Load app icon */
-    GLFWimage images[1];
-    images[0].pixels = stbi_load("C:/Users/nowak/source/repos/ComputeShader_LISA/images/agh.jpg", &images[0].width, &images[0].height, 0, 4); //rgba channels 
-    glfwSetWindowIcon(p_Window, 1, images);
-    stbi_image_free(images[0].pixels);
-
-    /* GLAD initialization */
-    if (m_App.initGLAD() == -1)
-    {
-        return -1;
-    }
-    /* Text shaders */
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    p_TextShader = new TextShader("shaderCodes/TextVertex.vs", "shaderCodes/TextFragment.fs");
-    p_TextShader->makeActive();
-    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(800), 0.0f, static_cast<float>(600));
-    glUniformMatrix4fv(glGetUniformLocation(p_TextShader->shaderProgramID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-    p_TextShader->initBuffers();
-    /* Be ready for resize */
-    glfwSetFramebufferSizeCallback(p_Window, m_App.framebuffer_size_callback);
-
-    /* Activate compute shader */
-    p_CompShader = new ComputeShader("shaderCodes/computeShader.comp", glm::uvec2(m_X_SIZE, m_Y_SIZE));
-    p_CompShader->use();
-
-    /* Vertex and Fragment shader creation for display pourposes */
-    p_Shader =  new Shader("shaderCodes/vertexShader.vs", "shaderCodes/fragmentShader.fs");
-    p_Shader->makeActive();
-    p_Shader->setInt("tex", 0);
-
-    // Create input vectors
-    // Mu map
-    std::vector<std::vector<float>> values(m_Y_SIZE, std::vector<float>(m_X_SIZE, 0));
-    for (size_t row = 1; row < m_Y_SIZE - 2; ++row)
-    {
-        for (size_t col = 1; col < m_X_SIZE - 2; ++col)
-        {
-            values[row][col] = m_MaterialSet.mu;
-        }
-    }
-    p_CompShader->set_values(values, GL_TEXTURE4);
-    values.clear();
-    values = std::vector<std::vector<float>>(m_Y_SIZE, std::vector<float>(m_X_SIZE, 0));
-    // Rho map
-    for (size_t row = 1; row < m_Y_SIZE - 2; ++row)
-    {
-        for (size_t col = 1; col < m_X_SIZE - 2; ++col)
-        {
-            values[row][col] = m_MaterialSet.rho;
-        }
-    }
-    p_CompShader->set_values(values, GL_TEXTURE5);
-
-
     return 0;
 } // Init solver
 
@@ -183,6 +119,82 @@ void Solver::initExtortionWaveMix(unsigned int length)
     }
 } // InitExtortionWaveMix
 
+int Solver::initOpenGL()
+{
+    /* --------- Initialize OpenGL ---------*/
+    m_App.initGLFW();
+
+    /* Create window */
+    p_Window = glfwCreateWindow(800, 600, "LISA 2D SH Waves Solver", NULL, NULL); // Create window
+    if (p_Window == NULL)                                                           // Check if window properly created
+    {
+        std::cout << "Failed to create window!\n";
+        glfwTerminate();
+        return -1;
+    }
+    glfwMakeContextCurrent(p_Window); // Set the current window as current to render
+
+    /* Load app icon */
+    GLFWimage images[1];
+    images[0].pixels = stbi_load("C:/Users/nowak/source/repos/ComputeShader_LISA/images/agh.jpg", &images[0].width, &images[0].height, 0, 4); //rgba channels 
+    glfwSetWindowIcon(p_Window, 1, images);
+    stbi_image_free(images[0].pixels);
+
+    /* GLAD initialization */
+    if (m_App.initGLAD() == -1)
+    {
+        return -1;
+    }
+    /* Text shaders */
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    p_TextShader = new TextShader("shaderCodes/TextVertex.vs", "shaderCodes/TextFragment.fs");
+    p_TextShader->makeActive();
+    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(800), 0.0f, static_cast<float>(600));
+    glUniformMatrix4fv(glGetUniformLocation(p_TextShader->shaderProgramID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+    p_TextShader->initBuffers();
+    /* Be ready for resize */
+    glfwSetFramebufferSizeCallback(p_Window, m_App.framebuffer_size_callback);
+
+    /* Activate compute shader */
+    auto x_size = m_GridSet.xGridSize;
+    auto y_size = m_GridSet.yGridSize;
+    p_CompShader = new ComputeShader("shaderCodes/computeShader.comp", glm::uvec2(x_size,y_size));
+    p_CompShader->use();
+
+    /* Vertex and Fragment shader creation for display pourposes */
+    p_Shader = new Shader("shaderCodes/vertexShader.vs", "shaderCodes/fragmentShader.fs");
+    p_Shader->makeActive();
+    p_Shader->setInt("tex", 0);
+
+    // Create input vectors
+    // Mu map
+    std::vector<std::vector<float>> values(y_size, std::vector<float>(x_size, 0));
+    for (size_t row = 1; row < y_size - 2; ++row)
+    {
+        for (size_t col = 1; col < x_size - 2; ++col)
+        {
+            values[row][col] = m_MaterialSet.mu;
+        }
+    }
+    p_CompShader->set_values(values, GL_TEXTURE4);
+    values.clear();
+    values = std::vector<std::vector<float>>(y_size, std::vector<float>(x_size, 0));
+    // Rho map
+    for (size_t row = 1; row < y_size - 2; ++row)
+    {
+        for (size_t col = 1; col < x_size - 2; ++col)
+        {
+            values[row][col] = m_MaterialSet.rho;
+        }
+    }
+    p_CompShader->set_values(values, GL_TEXTURE5);
+
+
+    return 0;
+} //initOpenGL
+
+
 void Solver::solve()
 {
     auto it = p_Extortion->begin();
@@ -192,6 +204,8 @@ void Solver::solve()
     std::cout << "Start time: " << startTime << "\n";
     /* Renders each frame with each iteration */
     int counter = 0;
+    /* Open file to wrtie fft data */
+    std::ofstream fft_data("text.txt");
     // Display loop
     if (m_Settings.display)
     {
@@ -253,17 +267,22 @@ void Solver::solve()
             p_CompShader->wait();
 
             /* Counters incrementation */
-            p_CompShader->update_ssbo(*it);
+            auto vec = p_CompShader->update_ssbo(*it);
+            fft_data << vec[1] << ' ';                      // Save data to file
             ++it;
             ++counter;
         }
     }
-    
     std::cout << "End time: " << glfwGetTime() - startTime << "\n";
-
     glfwTerminate(); // Clear/delete created objects
-}
+    fft_data.close();
+}   // solve()
 
+auto Solver::displayBasicInfo() -> void
+{
+    std::cout << "Solver information: \n";
+    std::cout << "Grid size.\nX: " << m_GridSet.xGridSize << "\nY: " << m_GridSet.yGridSize << "\n";
+}   // displayInfo
 
 
 

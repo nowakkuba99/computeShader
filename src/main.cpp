@@ -8,18 +8,25 @@ int main()
     /* Display banner */
     std::cout << banner << std::endl;
 
-    constexpr auto X_SIZE = 4002;
-    constexpr auto Y_SIZE = 22;
-
     /* SOLVER Settings */
     LISA_SH::solverSettings settings;
     settings.display = false;
-    LISA_SH::Solver* solver = LISA_SH::Solver::getInstance(settings,X_SIZE,Y_SIZE);
+    settings.specimenLength_meters = 400e-3;
+    LISA_SH::Solver* solver = LISA_SH::Solver::getInstance(settings);
 
     solver->initSolver();
-
+    solver->displayBasicInfo();
     solver->solve();
 
     delete solver;
     return 0;
 }
+
+/* TO DO
+- File writer class which will write 20 measurements data to 20 files and merge at the end (?)
+- Add Correct compute shader loading based on settings
+- Create hysteresis based compute shaders
+- Create proper measurements system for compute shader
+- Crack placement information passing to GPU
+- Hysteresiss parameters passing to GPU -> Maybe second SSBO
+*/
