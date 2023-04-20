@@ -86,6 +86,11 @@ void main()
         {
             saveNext(counter,w_next,pos);
         }
+
+        /* Save data to measurements array */
+        if(pos.x == 100 && pos.y == 3)
+            measurements_data[1] = w_next;
+
     }
     
 }

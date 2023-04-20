@@ -33,7 +33,7 @@ class Solver
 {
 protected:
     // Protected constructor
-    inline Solver(solverSettings set, const int X_SIZE, const int Y_SIZE)
+    inline Solver(solverSettings set)
     :
     m_GridSet(set.dx_meters,set.dy_meters,set.specimenLength_meters, set.specimenThickness_meters),
     m_TimeSet(set.dt_seconds, set.simulationTime_seconds),
@@ -57,7 +57,7 @@ public:
             delete p_Shader;
     }
     // Singelton getter
-    static Solver* getInstance(solverSettings set, const int X_SIZE, const int Y_SIZE);
+    static Solver* getInstance(solverSettings set);
     
     /* ---------------------------------------------------------------------------- */
     /* ---------------------SPECIMEN INITIALIZATION FUNCTIONS---------------------- */
@@ -68,44 +68,24 @@ public:
     auto initSolver() -> int;
 
     /**
+        Function used to display current solver settings
+    */
+    auto displayBasicInfo() -> void;
+    /**
     *   Function used to start solver operation
     *   @param: -
     *   @return: -
     */
     void solve();
-protected:
-    /* ---------------------------------------------------------------------------- */
-    /* ---------------------------SOlVER FUNCTIONS--------------------------------- */
-    /* ---------------------------------------------------------------------------- */
-    
-    /**
-    *    Function used to solve the current state of grid for linear definition
-    *    @brief
-    *    @param: -
-    *    @return: -
-    */
-    void solveLinear();
-    /**
-        Function used to solve the current state of grid for linear definition with elastic hysteresis
-     */
-    void solveNonlinearHysteresis_Elastic();
-    /**
-        Function used to solve the current state of grid for nonlinear definition with inelastic hysteresis
-     */
-    void solveNonlinearHysteresis_Inelastic();
     
 
 private:
     // Member variables settings
-public:
     solverSettings  m_Settings;
     time            m_TimeSet;
     material        m_MaterialSet;
     grid            m_GridSet;
-    int             m_X_SIZE;
-    int             m_Y_SIZE;
     // Distortion variable
-public:
     std::unique_ptr<std::vector<float>> p_Extortion;
     // OpenGL related
     Application                     m_App;
@@ -119,7 +99,7 @@ private:
     void initExtortionSingleSin(unsigned int length);
     void initExtortionWaveMix(unsigned int length);
     /* Compute shader and display */
-    void initOpenGL();
+    int initOpenGL();
 };
 }   //LISA_SH namespace
 #endif /* solver_hpp */

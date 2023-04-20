@@ -47,8 +47,16 @@ struct hysteresisParams
     hysteresisType type             = hysteresisType::inelastic;
     float emPositive_m              = 1e-6;
     float emNegative_m              = 1e-6;
+    // Inelastic parameters
     int beta1                       = 100;
     int beta2                       = 100;
+    int alpha                       = 100;
+    // Elastic parameters
+    int gamma1                      = 100;
+    int gamma2                      = 100;
+    int gamma3                      = 100;
+    int gamma4                      = 100;
+    
 };
 
 struct crackDefinition
@@ -116,7 +124,7 @@ struct grid
         dx(dx_meters), dy(dy_meters),
         dxSquare(dx_meters*dx_meters), dySquare(dy_meters*dy_meters),
         dxCube(dx_meters*dx_meters*dx_meters), dyCube(dy_meters*dy_meters*dy_meters),
-        xGridSize(xLength_meters/dx_meters + 3), yGridSize(yLength_meters/dy_meters + 3)
+        xGridSize(xLength_meters/dx_meters + 2), yGridSize(yLength_meters/dy_meters + 2)
     {};
 };
 struct material
