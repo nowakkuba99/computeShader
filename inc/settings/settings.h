@@ -90,6 +90,9 @@ struct solverSettings
     
     /* CRACK */
     crackDefinition crack           = crackDefinition();
+
+    /* DISPLAY SETTINGS */
+    bool display                    = true;
 };
 /* STRUCTURES USED BY SOLVER INITIALIZED BASED ON SETTINGS STRUCTURE */
 struct grid

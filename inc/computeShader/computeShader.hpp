@@ -16,12 +16,12 @@ public:
     /**
      * Compute shader constructor.
      * 
-     * Constructor reads shader code from file,
+     * @brief Constructor reads shader code from file,
      * compiles shader, creating program and data
      * buffer through texture object.
      * 
-     * @param path Path to compute shader code
-     * @param size Work size group for compute shader
+     * @param path:     Path to compute shader code
+     * @param size:     Work size group for compute shader
      * 
      * @return -
     */
