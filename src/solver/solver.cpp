@@ -192,40 +192,73 @@ void Solver::solve()
     std::cout << "Start time: " << startTime << "\n";
     /* Renders each frame with each iteration */
     int counter = 0;
-    while (!glfwWindowShouldClose(p_Window) && counter < 10000)
+    // Display loop
+    if (m_Settings.display)
     {
-        /* Input handling */
-        m_App.processInput(p_Window); // Get user input and process it
+        while (!glfwWindowShouldClose(p_Window) && counter < 10000)
+        {
+            /* Input handling */
+            m_App.processInput(p_Window); // Get user input and process it
 
-        /* Compute shader */
-        p_CompShader->use();
-        p_CompShader->dispatch();
-        p_CompShader->wait();
+            /* Compute shader */
+            p_CompShader->use();
+            p_CompShader->dispatch();
+            p_CompShader->wait();
 
-        /* Start rendering */
+            /* Start rendering */
+            glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Set color that will be set with clear command
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the depth buffer
+
+            /* Active correct map based on counter */
+            p_Shader->makeActive();
+            int currentDisplacementTexture = p_CompShader->getTexture();
+            p_Shader->setInt("tex", currentDisplacementTexture);
+            /* Render displacement map */
+            p_Shader->renderQuad();
+            /* Render text information */
+            std::string label = "Loop: " + std::to_string(counter) + "/ who knows?";
+            p_TextShader->RenderText(label, 2.0f, 10.0f, 1.0f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
+            p_TextShader->RenderText("(C) Jakub Nowak 2023", 600.0f, 580.0f, 0.75f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
+
+            /* OpenGL buffer swap and event poll */
+            glfwSwapBuffers(p_Window); // Swap current pixels values for the window
+            glfwPollEvents(); // Check for events (e.g. keyboard interupts etc.) and calls callbacks
+
+            /* Counters incrementation */
+            p_CompShader->update_ssbo(*it);
+            ++it;
+            ++counter;
+        }
+    }
+    else
+    {
+        /* Render background once */
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Set color that will be set with clear command
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the depth buffer
-
-        /* Active correct map based on counter */
-        p_Shader->makeActive();
-        int currentDisplacementTexture = p_CompShader->getTexture();
-        p_Shader->setInt("tex", currentDisplacementTexture);
-        /* Render displacement map */
-        p_Shader->renderQuad();
         /* Render text information */
-        std::string label = "Loop: " + std::to_string(counter) + "/ who knows?";
-        p_TextShader->RenderText(label, 2.0f, 10.0f, 1.0f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
+        std::string label = "Computing in progress!";
+        p_TextShader->RenderText(label, 250.0f, 300.0f, 1.0f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
         p_TextShader->RenderText("(C) Jakub Nowak 2023", 600.0f, 580.0f, 0.75f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
-
-        /* OpenGL buffer swap and event poll */
         glfwSwapBuffers(p_Window); // Swap current pixels values for the window
-        glfwPollEvents(); // Check for events (e.g. keyboard interupts etc.) and calls callbacks
+        // Only computing
+        while (!glfwWindowShouldClose(p_Window) && counter < 10000)
+        {
+            /* Input handling */
+            m_App.processInput(p_Window); // Get user input and process it
+            glfwPollEvents(); // Check for events (e.g. keyboard interupts etc.) and calls callbacks
 
-        /* Counters incrementation */
-        p_CompShader->update_ssbo(*it);
-        ++it;
-        ++counter;
+            /* Compute shader */
+            p_CompShader->use();
+            p_CompShader->dispatch();
+            p_CompShader->wait();
+
+            /* Counters incrementation */
+            p_CompShader->update_ssbo(*it);
+            ++it;
+            ++counter;
+        }
     }
+    
     std::cout << "End time: " << glfwGetTime() - startTime << "\n";
 
     glfwTerminate(); // Clear/delete created objects
