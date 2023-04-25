@@ -230,7 +230,7 @@ void Solver::solve()
             /* Render displacement map */
             p_Shader->renderQuad();
             /* Render text information */
-            std::string label = "Loop: " + std::to_string(counter) + "/ who knows?";
+            std::string label = "Loop: " + std::to_string(counter) + "/ 10 000";
             p_TextShader->RenderText(label, 2.0f, 10.0f, 1.0f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
             p_TextShader->RenderText("(C) Jakub Nowak 2023", 600.0f, 580.0f, 0.75f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
 
