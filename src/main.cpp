@@ -1,7 +1,7 @@
 // Standard includes
 #include <iostream>
+// User includes
 #include "../inc/LISA_SH_Solver.h"
-
 
 int main()
 {
@@ -21,6 +21,16 @@ int main()
     delete solver;
     return 0;
 }
+/* Speed vs MATLAB for 400mm specimen
+
+Display on
+    Matlab: -
+    C++:    ~22s
+Display off
+    Matlab: ~60s
+    C++:    ~11s
+
+*/
 
 /* TO DO
 - File writer class which will write 20 measurements data to 20 files and merge at the end (?)
