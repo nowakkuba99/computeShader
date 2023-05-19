@@ -10,7 +10,8 @@ int main()
 
     /* SOLVER Settings */
     LISA_SH::solverSettings settings;
-    settings.display = false;
+    settings.display = true;
+    //settings.generateGIF = true;
     settings.specimenLength_meters = 400e-3;
     LISA_SH::Solver* solver = LISA_SH::Solver::getInstance(settings);
 

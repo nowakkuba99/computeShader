@@ -101,6 +101,8 @@ struct solverSettings
 
     /* DISPLAY SETTINGS */
     bool display                    = true;
+    /* GIF GENERATION */
+    bool generateGIF                = false;
 };
 /* STRUCTURES USED BY SOLVER INITIALIZED BASED ON SETTINGS STRUCTURE */
 struct grid

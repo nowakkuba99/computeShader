@@ -19,7 +19,8 @@
 // Freetype libraries - text rendering
 #include <ft2build.h>
 #include FT_FREETYPE_H
-
+// AppToGIF
+#include <AppToGIF.h>
 // User includes
 #include "../app/application.hpp"
 #include "../shader/shader.hpp"
@@ -34,11 +35,11 @@ class Solver
 protected:
     // Protected constructor
     inline Solver(solverSettings set)
-    :
-    m_GridSet(set.dx_meters,set.dy_meters,set.specimenLength_meters, set.specimenThickness_meters),
-    m_TimeSet(set.dt_seconds, set.simulationTime_seconds),
-    m_MaterialSet(set.youngModulus_pa, set.poisson, set.density_kg_m3),
-    m_Settings(set)
+        :
+        m_GridSet(set.dx_meters, set.dy_meters, set.specimenLength_meters, set.specimenThickness_meters),
+        m_TimeSet(set.dt_seconds, set.simulationTime_seconds),
+        m_MaterialSet(set.youngModulus_pa, set.poisson, set.density_kg_m3),
+        m_Settings(set)
     {
     };
     Solver() = delete;
