@@ -215,7 +215,7 @@ void Solver::solve()
             AppToGIF::GIFSettings           set;
             std::shared_ptr<AppToGIF::Frame> appFrame;
             // AppToGIF
-            set.fileName = "LISA.gif";
+            set.fileName = R"(resources\LISA.gif)";
             set.inputHeight = 600;
             set.inputWidth = 800;
             set.outputWidth = 800;
