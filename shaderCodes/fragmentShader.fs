@@ -24,7 +24,6 @@ vec4 colormap(float x);
 void main()
 {             
     float texCol = texture(tex, TexCoords).r;    
-
     // Normalize
     //  scaledValue = (rawValue - min) / (max - min);
     // min = -1, max = 1

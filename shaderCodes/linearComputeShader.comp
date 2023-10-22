@@ -1,0 +1,227 @@
+#version 450 core
+
+
+layout(local_size_x = 174, local_size_y = 2, local_size_z = 1) in;
+layout(r32f, binding = 0) uniform image2D mapOne;
+layout(r32f, binding = 1) uniform image2D mapTwo;
+layout(r32f, binding = 2) uniform image2D mapThree;
+layout(r32f, binding = 3) uniform image2D mapFour;
+layout(r32f, binding = 4) uniform image2D muMap;
+layout(r32f, binding = 5) uniform image2D rhoMap;
+layout(std430, binding = 14) buffer shaderStorageBuffer
+{
+    int counter;                    // Count for choosing Read/Write scheme
+    float measurements_data[20];    // Array to save measurements into
+    float extortion;                // Extortion value
+    int extortionPlacement;
+};
+layout(std430, binding = 15) buffer hysteresisParams
+{
+    float emPositive;
+    float emNegative;
+    // Inelastic parameters
+    int beta1;
+    int beta2;
+    int alpha;
+    // Elastic parameters
+    int gamma1;
+    int gamma2;
+    int gamma3;
+    int gamma4;
+};
+
+/*  --- Functions definitions --- */
+// Input
+float loadPrevious  (int pickCounter, ivec2 position);
+float loadCurrent   (int pickCounter, ivec2 position);
+float loadMu        (ivec2 position);
+float loadRho       (ivec2 position);
+// Output
+void saveNext       (int pickCounter, float value, ivec2 pos);
+// Check if grid
+bool checkIfGrid(ivec2 position);
+
+/* --- Main function --- */
+// Perform calculations only for the grid without borders which are air cells
+void main() 
+{
+    // Get position to read/write data from
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+
+    if(checkIfGrid(pos))
+    {
+        // Load displacement maps
+        float w_previous    = loadPrevious(counter,pos);
+        float w_current     = loadCurrent(counter,pos);
+        float w_5           = loadCurrent(counter,ivec2(pos.x+1,pos.y));
+        float w_7           = loadCurrent(counter,ivec2(pos.x-1,pos.y));
+        float w_6           = loadCurrent(counter,ivec2(pos.x,pos.y+1));
+        float w_8           = loadCurrent(counter,ivec2(pos.x,pos.y-1));
+        // Load params
+        float mu_1          = loadMu(pos);
+        float mu_2          = loadMu(ivec2(pos.x-1,pos.y));
+        float mu_3          = loadMu(ivec2(pos.x-1,pos.y-1));
+        float mu_4          = loadMu(ivec2(pos.x,pos.y-1));
+
+        float rho_1         = loadRho(pos);
+        float rho_2         = loadRho(ivec2(pos.x-1,pos.y));
+        float rho_3         = loadRho(ivec2(pos.x-1,pos.y-1));
+        float rho_4         = loadRho(ivec2(pos.x,pos.y-1));
+
+        // Parameters
+        float dx = 1e-4;
+        float dx_square = dx * dx;
+        float dy = 1e-4;
+        float dy_square = dy * dy;
+        float dt = 1e-8;
+        float dt_square = dt * dt;
+        /* LISA SH WAVE PROPAGATION */
+        // General equation
+        float w_next =
+        2*w_current - w_previous +
+        2*dt_square/(rho_1 + rho_2 + rho_3 + rho_4) * 
+        ( 
+            (
+                w_5 * (mu_1 + mu_4) + w_7 * (mu_2 + mu_3)
+                - w_current * (mu_1 + mu_2 + mu_3 + mu_4)
+            )/dx_square
+            +
+            (
+                w_6 * (mu_1 + mu_2) + w_8 * (mu_3 + mu_4)
+                - w_current * (mu_1 + mu_2 + mu_3 + mu_4)
+            )/dy_square
+        );
+        /* Apply extortion */
+        if(pos.x == extortionPlacement)
+        {
+            saveNext(counter,extortion,pos);
+        }
+        else
+        {
+            saveNext(counter,w_next,pos);
+        }
+
+        /* Save data to measurements array */
+        if(pos.x == 100 && pos.y == 3)
+            measurements_data[1] = w_next;
+
+    }
+    
+}
+
+/* --- Helper functions --- */
+/*
+        --- Count = 0 ---
+        1: Previous -> READ ONLY
+        2: Current -> READ ONLY
+        3: Next -> WRITE
+        4: Unused
+        --- Count = 1 ---
+        1: Unused
+        2: Previous -> READ ONLY
+        3: Current -> READ ONLY
+        4: Next -> WRITE
+        --- Count = 2 ---
+        1: Next -> WRITE
+        2: Unused
+        3: Previous -> READ ONLY
+        4: Current - READ ONLY
+        --- Count = 3 ---
+        1: Current -> READ ONLY
+        2: Next -> WRITE
+        3: Unused
+        4: Previous -> READ ONLY
+        --- REPEAT ---
+*/
+/* 
+   ------------------------------------ 
+            Load input and
+              save output 
+   ------------------------------------
+*/
+float loadPrevious(int pickCounter,ivec2 position)
+{
+    if(pickCounter == 0)
+    {
+        return imageLoad(mapOne, position).r;
+    }
+    else if(pickCounter == 1)
+    {
+        return imageLoad(mapTwo, position).r;
+    }
+    else if(pickCounter == 2)
+    {
+        return imageLoad(mapThree, position).r;
+    }
+    else if(pickCounter == 3)
+    {
+        return imageLoad(mapFour, position).r;
+    }
+    else return -1.0f;
+}
+float loadCurrent(int pickCounter, ivec2 position)
+{
+    if(pickCounter == 0)
+    {
+        return imageLoad(mapTwo, position).r;
+    }
+    else if(pickCounter == 1)
+    {
+        return imageLoad(mapThree, position).r;
+    }
+    else if(pickCounter == 2)
+    {
+        return imageLoad(mapFour, position).r;
+    }
+    else if(pickCounter == 3)
+    {
+        return imageLoad(mapOne, position).r;
+    }
+    else return -1.0f;
+}
+void saveNext(int pickCounter, float value, ivec2 position)
+{
+    if(pickCounter == 0)
+    {
+        imageStore(mapThree,position,vec4(value,0,0,0));
+    }
+    else if(pickCounter == 1)
+    {
+        imageStore(mapFour,position,vec4(value,0,0,0));
+    }
+    else if(pickCounter == 2)
+    {
+        imageStore(mapOne,position,vec4(value,0,0,0));
+    }
+    else if(pickCounter == 3)
+    {
+        imageStore(mapTwo,position,vec4(value,0,0,0));
+    }
+    else
+    {
+        imageStore(mapOne,position,vec4(-1,0,0,0));
+    }
+}
+float loadMu(ivec2 position)
+{
+    return imageLoad(muMap, position).r;
+} 
+float loadRho(ivec2 position)
+{
+    return imageLoad(rhoMap, position).r;
+}
+/* --- Check if specimen or air cell --- */
+bool checkIfGrid(ivec2 position)
+{
+    // Get the dimensions of the grid
+    ivec2 dims = imageSize(mapOne);
+
+    if(position.x > 0 && position.x < (dims.x-1))
+    {
+        if(position.y > 0 && position.y < (dims.y-1))
+        {
+            return true;
+        }
+    }
+    return false;
+}

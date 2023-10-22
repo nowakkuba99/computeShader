@@ -15,8 +15,10 @@
     #define STB_IMAGE_IMPLEMENTATION
 #endif // !STB_IMAGE_IMPLEMENTATION
 #include "../../inc/stb/stb_image.h"
-
 #include "../../inc/solver/solver.hpp"
+
+typedef LISA_SH::crackDefinition::crackPlacement SPECIMEN_TYPE;
+
 namespace LISA_SH
 {
 /* --------- Singelton instance getter ---------*/
@@ -155,46 +157,48 @@ int Solver::initOpenGL()
     /* Be ready for resize */
     glfwSetFramebufferSizeCallback(p_Window, m_App.framebuffer_size_callback);
 
-    /* Activate compute shader */
-    auto x_size = m_GridSet.xGridSize;
-    auto y_size = m_GridSet.yGridSize;
-    p_CompShader = new ComputeShader("shaderCodes/computeShader.comp", glm::uvec2(x_size,y_size));
-    p_CompShader->use();
-
     /* Vertex and Fragment shader creation for display pourposes */
     p_Shader = new Shader("shaderCodes/vertexShader.vs", "shaderCodes/fragmentShader.fs");
     p_Shader->makeActive();
     p_Shader->setInt("tex", 0);
-
-    // Create input vectors
-    // Mu map
-    std::vector<std::vector<float>> values(y_size, std::vector<float>(x_size, 0));
-    for (size_t row = 1; row < y_size - 2; ++row)
-    {
-        for (size_t col = 1; col < x_size - 2; ++col)
-        {
-            values[row][col] = m_MaterialSet.mu;
-        }
-    }
-    p_CompShader->set_values(values, GL_TEXTURE4);
-    values.clear();
-    values = std::vector<std::vector<float>>(y_size, std::vector<float>(x_size, 0));
-    // Rho map
-    for (size_t row = 1; row < y_size - 2; ++row)
-    {
-        for (size_t col = 1; col < x_size - 2; ++col)
-        {
-            values[row][col] = m_MaterialSet.rho;
-        }
-    }
-    p_CompShader->set_values(values, GL_TEXTURE5);
-
 
     return 0;
 } //initOpenGL
 
 
 void Solver::solve()
+{
+    // Init correct type of solver
+    switch (m_Settings.crack.crack)
+    {
+    case SPECIMEN_TYPE::linearSpecimen:
+        initLinear();
+        solveLinear();
+        break;
+    case SPECIMEN_TYPE::nonlinearSpecimen:
+        if (m_Settings.hysteresisMode.type == LISA_SH::hysteresisParams::hysteresisType::inelastic)
+        {
+            initInelastic();
+            solveInelastic();
+        }
+        else
+            initElastic();
+        break;
+    case SPECIMEN_TYPE::singleCrack:
+        if (m_Settings.hysteresisMode.type == LISA_SH::hysteresisParams::hysteresisType::elastic)
+            initInelasticCrack();
+        else
+            initElasticCrack();
+        break;
+    default:
+        std::cerr << "Invalid specimen type\n";
+        break;
+    }
+
+
+}   // solve()
+
+void Solver::solveLinear()
 {
     auto it = p_Extortion->begin();
     /* Main loop */
@@ -359,13 +363,244 @@ void Solver::solve()
     std::cout << "End time: " << glfwGetTime() - startTime << "\n";
     glfwTerminate(); // Clear/delete created objects
     fft_data.close();
-}   // solve()
+}
+
+void Solver::solveInelastic()
+{
+    auto it = p_Extortion->begin();
+    /* Main loop */
+    std::cout << "Measure time for 10 000 iterations\n";
+    auto startTime = glfwGetTime();
+    std::cout << "Start time: " << startTime << "\n";
+    /* Renders each frame with each iteration */
+    int counter = 0;
+    /* Open file to wrtie fft data */
+    std::ofstream fft_data("text.txt");
+    // Display loop
+    if (m_Settings.display)
+    {
+        if (m_Settings.generateGIF)
+        {
+            // AppToGIF
+            AppToGIF::EncoderApp& m_AppToGIF{ AppToGIF::EncoderApp::getInstance() };
+            AppToGIF::GIFSettings           set;
+            std::shared_ptr<AppToGIF::Frame> appFrame;
+            // AppToGIF
+            set.fileName = R"(resources\LISA.gif)";
+            set.inputHeight = 600;
+            set.inputWidth = 800;
+            set.outputWidth = 800;
+            set.outputHeight = 600;
+            set.frameRate = 50;
+            set.bitRate = 10000;
+            set.bgraEncoding = true; //No need to be done - enabled by default
+            //set.doubleEncoding = true;
+            m_AppToGIF.init(set);
+            m_AppToGIF.startEncoder();
+            m_AppToGIF.setAsynchronousMode();
+            std::vector<char> buffer(set.outputWidth * set.outputHeight * 3);
+            while (!glfwWindowShouldClose(p_Window) && counter < 20000)
+            {
+                /* Input handling */
+                m_App.processInput(p_Window); // Get user input and process it
+
+                /* Compute shader */
+                p_CompShader->useInelastic();
+                p_CompShader->dispatch();
+                p_CompShader->wait();
+
+                /* Start rendering */
+                glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Set color that will be set with clear command
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the depth buffer
+
+                /* Active correct map based on counter */
+                p_Shader->makeActive();
+                int currentDisplacementTexture = p_CompShader->getTexture();
+                p_Shader->setInt("tex", currentDisplacementTexture);
+                /* Render displacement map */
+                p_Shader->renderQuad();
+                /* Render text information */
+                std::string label = "Loop: " + std::to_string(counter) + "/ 20 000";
+                p_TextShader->RenderText(label, 2.0f, 10.0f, 1.0f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
+                p_TextShader->RenderText("(C) Jakub Nowak 2023", 600.0f, 580.0f, 0.75f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
+
+                /* OpenGL buffer swap and event poll */
+                glfwSwapBuffers(p_Window); // Swap current pixels values for the window
+                glfwPollEvents(); // Check for events (e.g. keyboard interupts etc.) and calls callbacks
+
+                /* Counters incrementation */
+                p_CompShader->update_ssbo(*it);
+                ++it;
+                ++counter;
+                if (counter % 200 == 0)
+                {
+                    glReadPixels(0, 0, set.outputWidth, set.outputHeight, GL_BGR, GL_UNSIGNED_BYTE, buffer.data());
+                    appFrame = m_AppToGIF.getFrame();
+                    if (appFrame != nullptr)
+                    {
+                        unsigned long buffCount = 0;
+                        for (int y = set.outputHeight - 1; y >= 0; y--) {
+                            uint8_t* row = appFrame->getRow(y);
+                            for (int x = 0; x < set.outputWidth; x++) {
+                                const int index = x * 4;
+                                row[index + 0] = buffer[buffCount++];
+                                row[index + 1] = buffer[buffCount++];
+                                row[index + 2] = buffer[buffCount++];
+                                row[index + 3] = 0xFF; // a
+                            }
+                        }
+                    }
+                    appFrame.reset();
+                    buffer.clear();
+                    m_AppToGIF.passFrame();
+                    m_AppToGIF.commitFrame();
+                }
+            }
+            /* --- Finaly stop and destroy Encoder --- */
+            m_AppToGIF.stopEncoder();
+            m_AppToGIF.destroyEncoder();
+        }
+        else
+        {
+            while (!glfwWindowShouldClose(p_Window) && counter < 10000)
+            {
+                /* Input handling */
+                m_App.processInput(p_Window); // Get user input and process it
+
+                /* Compute shader */
+                p_CompShader->useInelastic();
+                p_CompShader->dispatch();
+                p_CompShader->wait();
+
+                /* Start rendering */
+                glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Set color that will be set with clear command
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the depth buffer
+
+                /* Active correct map based on counter */
+                p_Shader->makeActive();
+                int currentDisplacementTexture = p_CompShader->getTexture();
+                p_Shader->setInt("tex", currentDisplacementTexture);
+                /* Render displacement map */
+                p_Shader->renderQuad();
+                /* Render text information */
+                std::string label = "Loop: " + std::to_string(counter) + "/ 10 000";
+                p_TextShader->RenderText(label, 2.0f, 10.0f, 1.0f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
+                p_TextShader->RenderText("(C) Jakub Nowak 2023", 600.0f, 580.0f, 0.75f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
+
+                /* OpenGL buffer swap and event poll */
+                glfwSwapBuffers(p_Window); // Swap current pixels values for the window
+                glfwPollEvents(); // Check for events (e.g. keyboard interupts etc.) and calls callbacks
+
+                /* Counters incrementation */
+                p_CompShader->update_ssbo(*it);
+                ++it;
+                ++counter;
+            }
+        }
+    }
+    else
+    {
+        /* Render background once */
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Set color that will be set with clear command
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Clear the depth buffer
+        /* Render text information */
+        std::string label = "Computing in progress!";
+        p_TextShader->RenderText(label, 250.0f, 300.0f, 1.0f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
+        p_TextShader->RenderText("(C) Jakub Nowak 2023", 600.0f, 580.0f, 0.75f, glm::vec3(16 / 255, 16 / 255, 16 / 255));
+        glfwSwapBuffers(p_Window); // Swap current pixels values for the window
+        // Only computing
+        while (!glfwWindowShouldClose(p_Window) && counter < 10000)
+        {
+            /* Input handling */
+            m_App.processInput(p_Window); // Get user input and process it
+            glfwPollEvents(); // Check for events (e.g. keyboard interupts etc.) and calls callbacks
+
+            /* Compute shader */
+            p_CompShader->useInelastic();
+            p_CompShader->dispatch();
+            p_CompShader->wait();
+
+            /* Counters incrementation */
+            auto vec = p_CompShader->update_ssbo(*it);
+            fft_data << vec[1] << ' ';                      // Save data to file
+            ++it;
+            ++counter;
+        }
+    }
+    std::cout << "End time: " << glfwGetTime() - startTime << "\n";
+    glfwTerminate(); // Clear/delete created objects
+    fft_data.close();
+}
+
 
 auto Solver::displayBasicInfo() -> void
 {
     std::cout << "Solver information: \n";
     std::cout << "Grid size.\nX: " << m_GridSet.xGridSize << "\nY: " << m_GridSet.yGridSize << "\n";
 }   // displayInfo
+
+
+void Solver::initLinear()
+{
+    /* Activate compute shader */
+    auto x_size = m_GridSet.xGridSize;
+    auto y_size = m_GridSet.yGridSize;
+    p_CompShader = new ComputeShader("shaderCodes/linearComputeShader.comp", glm::uvec2(x_size, y_size),LISA_SH::specimenType::linear);
+    p_CompShader->use();
+
+    // Create input vectors
+    // Mu map
+    std::vector<std::vector<float>> values(y_size, std::vector<float>(x_size, 0));
+    for (size_t row = 1; row < y_size - 2; ++row)
+    {
+        for (size_t col = 1; col < x_size - 2; ++col)
+        {
+            values[row][col] = m_MaterialSet.mu;
+        }
+    }
+    p_CompShader->set_values(values, GL_TEXTURE4);
+    values.clear();
+    values = std::vector<std::vector<float>>(y_size, std::vector<float>(x_size, 0));
+    // Rho map
+    for (size_t row = 1; row < y_size - 2; ++row)
+    {
+        for (size_t col = 1; col < x_size - 2; ++col)
+        {
+            values[row][col] = m_MaterialSet.rho;
+        }
+    }
+    p_CompShader->set_values(values, GL_TEXTURE5);
+}
+
+void Solver::initInelastic()
+{
+    /* Activate compute shader */
+    auto x_size = m_GridSet.xGridSize;
+    auto y_size = m_GridSet.yGridSize;
+    p_CompShader = new ComputeShader("shaderCodes/inelasticComputeShader.comp", glm::uvec2(x_size, y_size),LISA_SH::specimenType::inelastic);
+    p_CompShader->use();
+
+    // Create input vectors
+    std::vector<std::vector<float>> values(y_size, std::vector<float>(x_size, 0));
+    // Mu map
+    generate2DMap(values, m_MaterialSet.mu,x_size,y_size);
+    p_CompShader->set_values(values, GL_TEXTURE4);
+    // Rho map
+    values.clear();
+    values = std::vector<std::vector<float>>(y_size, std::vector<float>(x_size, 0));
+    generate2DMap(values, m_MaterialSet.rho, x_size, y_size);
+    p_CompShader->set_values(values, GL_TEXTURE5);
+    // HysteresisMap map
+    values.clear();
+    values = std::vector<std::vector<float>>(y_size, std::vector<float>(x_size, 0));
+    generate2DMap(values, 1.0f,x_size,y_size);
+    p_CompShader->set_values(values, GL_TEXTURE6);
+
+    // Set hysteresis parameters
+    p_CompShader->setOtherParams(m_Settings.hysteresisMode.params);
+}
+
+
 
 
 

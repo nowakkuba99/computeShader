@@ -78,7 +78,69 @@ public:
     *   @return: -
     */
     void solve();
-    
+
+private:
+    // Solver init functions
+
+    /**
+    *   Function used to start linear solver operation
+    *   @param: -
+    *   @return: -
+    */
+    void initLinear();
+
+    /**
+    *   Function used to start inelastic solver operation
+    *   @param: -
+    *   @return: -
+    */
+    void initInelastic();
+
+    /**
+    *   Function used to start inelastic crack solver operation
+    *   @param: -
+    *   @return: -
+    */
+    void initInelasticCrack() {};
+
+    /**
+*   Function used to start inelastic solver operation
+*   @param: -
+*   @return: -
+*/
+    void initElastic() {};
+
+    /**
+    *   Function used to start inelastic crack solver operation
+    *   @param: -
+    *   @return: -
+    */
+    void initElasticCrack() {};
+
+
+    // Solve functions
+
+    void solveLinear();
+
+    void solveInelastic();
+
+    void solveElastic();
+
+    // Map genereate functions
+    void generate2DMap(std::vector<std::vector<float>>& values, float value_to_set, unsigned int x_size, unsigned int y_size)
+    {
+        for (size_t row = 1; row < y_size - 2; ++row)
+        {
+            for (size_t col = 1; col < x_size - 2; ++col)
+            {
+                values[row][col] = value_to_set;
+            }
+        }
+    }
+    void generateCrackMap(std::vector<std::vector<float>>& values, float value_to_set, unsigned int x_size, unsigned int y_size)
+    {
+
+    }
 
 private:
     // Member variables settings

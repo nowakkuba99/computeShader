@@ -11,6 +11,8 @@
 #include <sstream>
 #include <vector>
 
+#include "../settings/settings.h"
+
 class ComputeShader {
 public:
     /**
@@ -25,7 +27,7 @@ public:
      * 
      * @return -
     */
-    ComputeShader(const char* path, glm::uvec2 size);
+    ComputeShader(const char* path, glm::uvec2 size, LISA_SH::specimenType type);
     /**
      * Compute shader destructor.
      * 
@@ -52,6 +54,10 @@ public:
      * @return -
     */
     void use();
+
+    void useInelastic();
+
+    void useElastic();
 
     /**
      * Dispatch compute shader.
@@ -109,6 +115,9 @@ public:
      * @return Vector of measured values along the top of the simulated plate.
     */
     auto update_ssbo(float extortionValue) -> std::vector<float>;
+    // Hysteresis params setter
+    auto setOtherParams(const LISA_SH::hysteresis_params_ssbo& params) -> void;     //CHANGE STRUCT TO CUSTOM
+
 private:
     // SSBO managemnt helper functions
     // Increase the counter from 0 up to 3 and reapeat
@@ -153,10 +162,16 @@ private:
             }
         }
     } shaderStorageBuffer;
+    // Hysteresis params
+    LISA_SH::hysteresis_params_ssbo hysteresisParams;
+    // Shader Storage Buffer Objects
     GLuint ssbo;
-    // Mu parameter map
+    GLuint ssbo2;
+    // Parameter maps
     unsigned int muMap;
     unsigned int rhoMap;
+    // Inealstic hysteresis params maps
+    unsigned int hysteresisMap;
 };
 
 

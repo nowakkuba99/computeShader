@@ -12,8 +12,16 @@
 // User includes
 #include "../functions/functions.h"
 
+
 namespace LISA_SH
 {
+enum class specimenType
+{
+    linear,
+    inelastic,
+    elastic
+};
+
 struct extortionDefinition
 {
     enum class extortionType : uint8_t
@@ -36,26 +44,46 @@ struct extortionDefinition
     int numOfPeriods                = 14;
     float amplitude                 = 1e-6;
 };
+// Hysteresis params for SSBO
+struct hysteresis_params_ssbo
+{
+    float emPositive_m{ 0 };
+    float emNegative_m{ 0 };
+    // Inelastic parameters
+    int beta1{ 0 };
+    int beta2{ 0 };
+    int alpha{ 0 };
+    // Elastic parameters
+    int gamma1{ 0 };
+    int gamma2{ 0 };
+    int gamma3{ 0 };
+    int gamma4{ 0 };
+};
 
 struct hysteresisParams
 {
     enum class hysteresisType : uint8_t
     {
-        elasitc,
+        elastic,
         inelastic
     };
     hysteresisType type             = hysteresisType::inelastic;
-    float emPositive_m              = 1e-6;
-    float emNegative_m              = 1e-6;
-    // Inelastic parameters
-    int beta1                       = 100;
-    int beta2                       = 100;
-    int alpha                       = 100;
-    // Elastic parameters
-    int gamma1                      = 100;
-    int gamma2                      = 100;
-    int gamma3                      = 100;
-    int gamma4                      = 100;
+    hysteresis_params_ssbo params   {};
+    
+    hysteresisParams()
+    {
+        params.emPositive_m = 1e-6;
+        params.emNegative_m = 1e-6;
+        // Inelastic parameters
+        params.beta1 = 100;
+        params.beta2 = 100;
+        params.alpha = 100;
+        // Elastic parameters
+        params.gamma1 = 100;
+        params.gamma2 = 100;
+        params.gamma3 = 100;
+        params.gamma4 = 100;
+    };
     
 };
 
@@ -67,7 +95,8 @@ struct crackDefinition
         linearSpecimen,
         nonlinearSpecimen
     };
-    crackPlacement crack            = crackPlacement::linearSpecimen;
+    //crackPlacement crack            = crackPlacement::linearSpecimen;
+    crackPlacement crack            = crackPlacement::nonlinearSpecimen;
     float crackPosition_meters      = 400e-3;   // 400 mm
     float crackLength_meters        = 10e-3;    // 10mm
 };
@@ -102,7 +131,7 @@ struct solverSettings
     /* DISPLAY SETTINGS */
     bool display                    = true;
     /* GIF GENERATION */
-    bool generateGIF                = true;
+    bool generateGIF                = false;
 };
 /* STRUCTURES USED BY SOLVER INITIALIZED BASED ON SETTINGS STRUCTURE */
 struct grid
@@ -157,6 +186,7 @@ struct time
         numberOfTimeSteps(simulationTime_seconds/dt_seconds)
     {};
 };
+
 
 }   // LISA_SH namespace
 #endif /* settings_h */

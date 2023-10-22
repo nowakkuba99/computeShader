@@ -1,7 +1,7 @@
 #include "../../inc/computeShader/computeShader.hpp"
 
 /* --- Constructor --- */
-ComputeShader::ComputeShader(const char* path, glm::uvec2 size)
+ComputeShader::ComputeShader(const char* path, glm::uvec2 size, LISA_SH::specimenType type)
 {
     work_size = size;
 
@@ -26,10 +26,19 @@ ComputeShader::ComputeShader(const char* path, glm::uvec2 size)
 
     // compile shader
     unsigned int shader;
+    int compilationStatus; //Variable to hold comilation status
+    char infoLog[512];  //Variable to hold error message if needed
 
     shader = glCreateShader(GL_COMPUTE_SHADER);
     glShaderSource(shader, 1, &c_shader_code, NULL);
     glCompileShader(shader);
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &compilationStatus);     //Get comilation status
+    if (!compilationStatus)
+    {
+        glGetShaderInfoLog(shader, 512, NULL, infoLog);
+        std::cout << "ERROR::SHADER::COMPUTE::COMPILATION_FAILED\n" << infoLog << "\n";
+    }
+
 
     // create program
     id = glCreateProgram();
@@ -121,15 +130,35 @@ ComputeShader::ComputeShader(const char* path, glm::uvec2 size)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size.x, size.y, 0, GL_RED, GL_FLOAT, NULL);
     glUniform1f(glGetUniformLocation(id, "rhoMap"), 5);
 
+    if (type != LISA_SH::specimenType::linear)
+    {
+        // Crack
+        glGenTextures(1, &hysteresisMap);
+        glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_2D, hysteresisMap);
 
+        // turns out we need this. huh.
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+        // create empty texture
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size.x, size.y, 0, GL_RED, GL_FLOAT, NULL);
+        glUniform1f(glGetUniformLocation(id, "hysteresisMap"), 6);
+    }
 
     // Counter in buffer
     glGenBuffers(1, &ssbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(shaderStorageBuffer), &shaderStorageBuffer, GL_DYNAMIC_READ);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 14, ssbo);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);  // unbind
 
+    // Hysteresis params
+    glGenBuffers(1, &ssbo2);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo2);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(hysteresisParams), &hysteresisParams, GL_STREAM_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 15, ssbo2);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);  // unbind
 }
 
 /* --- Use compute shader ---*/
@@ -142,7 +171,17 @@ void ComputeShader::use()
     glBindImageTexture(3, mapFour, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
     glBindImageTexture(4, muMap, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
     glBindImageTexture(5, rhoMap, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
-
+}
+void ComputeShader::useInelastic()
+{
+    glUseProgram(id);
+    glBindImageTexture(0, mapOne, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    glBindImageTexture(1, mapTwo, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    glBindImageTexture(2, mapThree, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    glBindImageTexture(3, mapFour, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32F);
+    glBindImageTexture(4, muMap, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
+    glBindImageTexture(5, rhoMap, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
+    glBindImageTexture(6, hysteresisMap, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
 }
 
 void ComputeShader::dispatch() {
@@ -278,3 +317,15 @@ auto ComputeShader::getTexture() const -> unsigned int
         4: Previous -> READ ONLY
         --- REPEAT ---
 */
+auto ComputeShader::setOtherParams(const LISA_SH::hysteresis_params_ssbo& params) -> void
+{
+    // Get handle to the SSBO
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo2);
+    GLvoid* ssboHandle = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+    // Prepare new values to write to SSBO
+    hysteresisParams = params;
+    // Write data to SSBO
+    memcpy(ssboHandle, &hysteresisParams, sizeof(hysteresisParams));
+    // Delete handle to SSBO
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+}
